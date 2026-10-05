@@ -3,6 +3,8 @@ const catElement = document.getElementById("cat");
 const mouseElement = document.getElementById("mouse");
 const scoreElement = document.getElementById("score");
 const timeElement = document.getElementById("time");
+const startScreenElement = document.getElementById("start-screen");
+const startButton = document.getElementById("start");
 const gameOverElement = document.getElementById("game-over");
 const finalScoreElement = document.getElementById("final-score");
 const restartButton = document.getElementById("restart");
@@ -16,7 +18,7 @@ const DIRECTION_INTERVAL = 850; // ミリ秒
 
 const keys = new Set();
 const cat = { x: 0, y: 0 };
-const mouse = { x: 0, y: 0, dx: 0, dy: 0 };
+const mice = [{ element: mouseElement, x: 0, y: 0, dx: 0, dy: 0 }];
 let score = 0;
 let startTime = 0;
 let previousTime = 0;
@@ -39,17 +41,19 @@ function bounds() {
 function draw() {
   catElement.style.left = `${cat.x}px`;
   catElement.style.top = `${cat.y}px`;
-  mouseElement.style.left = `${mouse.x}px`;
-  mouseElement.style.top = `${mouse.y}px`;
+  for (const mouse of mice) {
+    mouse.element.style.left = `${mouse.x}px`;
+    mouse.element.style.top = `${mouse.y}px`;
+  }
 }
 
-function chooseMouseDirection() {
+function chooseMouseDirection(mouse) {
   const angle = Math.random() * Math.PI * 2;
   mouse.dx = Math.cos(angle);
   mouse.dy = Math.sin(angle);
 }
 
-function placeMouse() {
+function placeMouse(mouse) {
   const area = bounds();
 
   // できるだけ猫から離れた位置に出して、すぐ捕まるのを防ぐ。
@@ -58,19 +62,43 @@ function placeMouse() {
     mouse.y = area.minY + Math.random() * (area.maxY - area.minY);
     if (Math.hypot(mouse.x - cat.x, mouse.y - cat.y) > 130) break;
   }
-  chooseMouseDirection();
+  chooseMouseDirection(mouse);
 }
 
-function startGame() {
+function addMouse() {
+  const element = document.createElement("div");
+  element.className = "character mouse";
+  element.setAttribute("role", "img");
+  element.setAttribute("aria-label", "ネズミ");
+  element.textContent = "🐭";
+  field.appendChild(element);
+
+  const mouse = { element, x: 0, y: 0, dx: 0, dy: 0 };
+  mice.push(mouse);
+  placeMouse(mouse);
+}
+
+function resetMice() {
+  // 再挑戦時は追加されたネズミを消し、最初の1匹に戻す。
+  while (mice.length > 1) mice.pop().element.remove();
+  placeMouse(mice[0]);
+}
+
+function placeCharacters() {
   const area = bounds();
   cat.x = area.minX + (area.maxX - area.minX) * 0.23;
   cat.y = area.minY + (area.maxY - area.minY) * 0.5;
+  resetMice();
+  draw();
+}
+
+function startGame() {
+  placeCharacters();
   score = 0;
   scoreElement.textContent = "0";
   timeElement.textContent = String(GAME_LENGTH);
   keys.clear();
-  placeMouse();
-  draw();
+  startScreenElement.hidden = true;
   gameOverElement.hidden = true;
   playing = true;
   startTime = performance.now();
@@ -107,23 +135,29 @@ function update(now) {
       cat.x = clamp(cat.x + horizontal / length * CAT_SPEED * seconds, area.minX, area.maxX);
       cat.y = clamp(cat.y + vertical / length * CAT_SPEED * seconds, area.minY, area.maxY);
 
+      // 残り20秒で2匹、10秒で3匹にする。
+      const targetMouseCount = remaining <= 10 ? 3 : remaining <= 20 ? 2 : 1;
+      while (mice.length < targetMouseCount) addMouse();
+
       if (now - lastDirectionTime >= DIRECTION_INTERVAL) {
-        chooseMouseDirection();
+        for (const mouse of mice) chooseMouseDirection(mouse);
         lastDirectionTime = now;
       }
-      mouse.x += mouse.dx * MOUSE_SPEED * seconds;
-      mouse.y += mouse.dy * MOUSE_SPEED * seconds;
+      for (const mouse of mice) {
+        mouse.x += mouse.dx * MOUSE_SPEED * seconds;
+        mouse.y += mouse.dy * MOUSE_SPEED * seconds;
 
-      // 壁に当たったネズミは向きを変える。
-      if (mouse.x < area.minX || mouse.x > area.maxX) mouse.dx *= -1;
-      if (mouse.y < area.minY || mouse.y > area.maxY) mouse.dy *= -1;
-      mouse.x = clamp(mouse.x, area.minX, area.maxX);
-      mouse.y = clamp(mouse.y, area.minY, area.maxY);
+        // 壁に当たったネズミは向きを変える。
+        if (mouse.x < area.minX || mouse.x > area.maxX) mouse.dx *= -1;
+        if (mouse.y < area.minY || mouse.y > area.maxY) mouse.dy *= -1;
+        mouse.x = clamp(mouse.x, area.minX, area.maxX);
+        mouse.y = clamp(mouse.y, area.minY, area.maxY);
 
-      if (Math.hypot(cat.x - mouse.x, cat.y - mouse.y) < CATCH_DISTANCE) {
-        score++;
-        scoreElement.textContent = String(score);
-        placeMouse();
+        if (Math.hypot(cat.x - mouse.x, cat.y - mouse.y) < CATCH_DISTANCE) {
+          score++;
+          scoreElement.textContent = String(score);
+          placeMouse(mouse);
+        }
       }
       draw();
     }
@@ -150,11 +184,14 @@ window.addEventListener("resize", () => {
   const area = bounds();
   cat.x = clamp(cat.x, area.minX, area.maxX);
   cat.y = clamp(cat.y, area.minY, area.maxY);
-  mouse.x = clamp(mouse.x, area.minX, area.maxX);
-  mouse.y = clamp(mouse.y, area.minY, area.maxY);
+  for (const mouse of mice) {
+    mouse.x = clamp(mouse.x, area.minX, area.maxX);
+    mouse.y = clamp(mouse.y, area.minY, area.maxY);
+  }
   draw();
 });
 
+startButton.addEventListener("click", startGame);
 restartButton.addEventListener("click", startGame);
-startGame();
+placeCharacters();
 requestAnimationFrame(update);

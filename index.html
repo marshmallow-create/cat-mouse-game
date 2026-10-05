@@ -11,9 +11,9 @@
   <main class="game-card">
     <header class="game-header">
       <div>
-        <p class="eyebrow">ちいさな おにごっこ</p>
+        <p class="eyebrow">小さな　おにごっこ</p>
         <h1>ねこさんのネズミさがし <span aria-hidden="true">🐱</span></h1>
-        <p class="intro">30秒でネズミを何匹つかまえられるかな？</p>
+        <p class="intro">30秒でネズミを何匹つかまえられるかな？ 残り20秒と10秒でネズミが増えるよ！</p>
       </div>
       <div class="status" aria-label="ゲームの記録">
         <div class="status-item"><span>スコア</span><strong id="score">0</strong></div>
@@ -30,12 +30,21 @@
         <div id="cat" class="character cat" role="img" aria-label="猫">🐱</div>
         <div id="mouse" class="character mouse" role="img" aria-label="ネズミ">🐭</div>
 
-        <div id="game-over" class="game-over" hidden>
+        <div id="start-screen" class="overlay">
+          <div class="result-card">
+            <div class="result-emoji" aria-hidden="true">🐱🐭</div>
+            <h2>準備はいい？</h2>
+            <p>STARTを押したら30秒のゲームが始まるよ</p>
+            <button id="start" type="button">START</button>
+          </div>
+        </div>
+
+        <div id="game-over" class="overlay" hidden>
           <div class="result-card">
             <div class="result-emoji" aria-hidden="true">🐱✨</div>
             <h2>おつかれさま！</h2>
             <p>ネズミを <strong id="final-score">0</strong> 匹つかまえたよ</p>
-            <button id="restart" type="button">もう一度遊ぶ</button>
+            <button id="restart" type="button">START <small>もう一度遊ぶ</small></button>
           </div>
         </div>
       </div>

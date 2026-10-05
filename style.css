@@ -105,7 +105,7 @@ h1 { margin: 0; color: #2872b8; font-size: clamp(24px, 3.5vw, 34px); line-height
 }
 .cat { z-index: 2; }
 
-.game-over {
+.overlay {
   position: absolute;
   z-index: 3;
   inset: 0;
@@ -114,7 +114,7 @@ h1 { margin: 0; color: #2872b8; font-size: clamp(24px, 3.5vw, 34px); line-height
   padding: 20px;
   background: #305c3e91;
 }
-.game-over[hidden] { display: none; }
+.overlay[hidden] { display: none; }
 .result-card {
   width: min(100%, 340px);
   padding: 28px;
@@ -141,6 +141,7 @@ button {
 }
 button:hover { background: #e67f70; }
 button:focus-visible { outline: 3px solid #355241; outline-offset: 4px; }
+button small { display: block; font-size: 11px; line-height: 1.2; }
 
 .instructions { margin: 19px 0 0; text-align: center; font-size: 14px; font-weight: 700; }
 kbd {
