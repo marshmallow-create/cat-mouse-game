@@ -5,15 +5,20 @@ const scoreElement = document.getElementById("score");
 const timeElement = document.getElementById("time");
 const startScreenElement = document.getElementById("start-screen");
 const startButton = document.getElementById("start");
+const countdownScreenElement = document.getElementById("countdown-screen");
+const countdownNumberElement = document.getElementById("countdown-number");
 const gameOverElement = document.getElementById("game-over");
 const finalScoreElement = document.getElementById("final-score");
 const restartButton = document.getElementById("restart");
 
 const GAME_LENGTH = 30; // 秒
+const COUNTDOWN_LENGTH = 3000; // ミリ秒
+const MOUSE_SPAWN_INTERVAL = 5000; // ミリ秒
 const CAT_SPEED = 270; // 1秒に進むピクセル数
 const MOUSE_SPEED = 115;
 const CHARACTER_RADIUS = 27;
-const CATCH_DISTANCE = 43;
+const CAT_RADIUS = 36;
+const CATCH_DISTANCE = 48;
 const DIRECTION_INTERVAL = 850; // ミリ秒
 
 const keys = new Set();
@@ -24,17 +29,19 @@ let startTime = 0;
 let previousTime = 0;
 let lastDirectionTime = 0;
 let playing = false;
+let countingDown = false;
+let countdownStartTime = 0;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function bounds() {
+function bounds(radius = CHARACTER_RADIUS) {
   return {
-    minX: CHARACTER_RADIUS,
-    maxX: Math.max(CHARACTER_RADIUS, field.clientWidth - CHARACTER_RADIUS),
-    minY: CHARACTER_RADIUS,
-    maxY: Math.max(CHARACTER_RADIUS, field.clientHeight - CHARACTER_RADIUS)
+    minX: radius,
+    maxX: Math.max(radius, field.clientWidth - radius),
+    minY: radius,
+    maxY: Math.max(radius, field.clientHeight - radius)
   };
 }
 
@@ -66,11 +73,11 @@ function placeMouse(mouse) {
 }
 
 function addMouse() {
-  const element = document.createElement("div");
+  const element = document.createElement("img");
   element.className = "character mouse";
-  element.setAttribute("role", "img");
-  element.setAttribute("aria-label", "ネズミ");
-  element.textContent = "🐭";
+  element.src = "images/ネズミ.png";
+  element.alt = "ネズミ";
+  element.draggable = false;
   field.appendChild(element);
 
   const mouse = { element, x: 0, y: 0, dx: 0, dy: 0 };
@@ -85,14 +92,14 @@ function resetMice() {
 }
 
 function placeCharacters() {
-  const area = bounds();
+  const area = bounds(CAT_RADIUS);
   cat.x = area.minX + (area.maxX - area.minX) * 0.23;
   cat.y = area.minY + (area.maxY - area.minY) * 0.5;
   resetMice();
   draw();
 }
 
-function startGame() {
+function beginCountdown() {
   placeCharacters();
   score = 0;
   scoreElement.textContent = "0";
@@ -100,10 +107,20 @@ function startGame() {
   keys.clear();
   startScreenElement.hidden = true;
   gameOverElement.hidden = true;
+  countdownNumberElement.textContent = "3";
+  countdownScreenElement.hidden = false;
+  playing = false;
+  countingDown = true;
+  countdownStartTime = performance.now();
+}
+
+function startGame(now) {
+  countdownScreenElement.hidden = true;
+  countingDown = false;
   playing = true;
-  startTime = performance.now();
-  previousTime = startTime;
-  lastDirectionTime = startTime;
+  startTime = now;
+  previousTime = now;
+  lastDirectionTime = now;
 }
 
 function endGame() {
@@ -116,6 +133,15 @@ function endGame() {
 }
 
 function update(now) {
+  if (countingDown) {
+    const elapsed = now - countdownStartTime;
+    if (elapsed >= COUNTDOWN_LENGTH) {
+      startGame(now);
+    } else {
+      countdownNumberElement.textContent = String(3 - Math.floor(elapsed / 1000));
+    }
+  }
+
   if (playing) {
     const remaining = Math.max(0, GAME_LENGTH - (now - startTime) / 1000);
     timeElement.textContent = String(Math.ceil(remaining));
@@ -126,17 +152,18 @@ function update(now) {
       // フレーム間の秒数を使うと、PCの描画速度が違っても同じ速さで動く。
       const seconds = Math.min((now - previousTime) / 1000, 0.05);
       const area = bounds();
+      const catArea = bounds(CAT_RADIUS);
       const horizontal = Number(keys.has("arrowright") || keys.has("d"))
         - Number(keys.has("arrowleft") || keys.has("a"));
       const vertical = Number(keys.has("arrowdown") || keys.has("s"))
         - Number(keys.has("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
 
-      cat.x = clamp(cat.x + horizontal / length * CAT_SPEED * seconds, area.minX, area.maxX);
-      cat.y = clamp(cat.y + vertical / length * CAT_SPEED * seconds, area.minY, area.maxY);
+      cat.x = clamp(cat.x + horizontal / length * CAT_SPEED * seconds, catArea.minX, catArea.maxX);
+      cat.y = clamp(cat.y + vertical / length * CAT_SPEED * seconds, catArea.minY, catArea.maxY);
 
-      // 残り20秒で2匹、10秒で3匹にする。
-      const targetMouseCount = remaining <= 10 ? 3 : remaining <= 20 ? 2 : 1;
+      // 開始から5秒ごとにネズミを1匹追加する。
+      const targetMouseCount = 1 + Math.floor((now - startTime) / MOUSE_SPAWN_INTERVAL);
       while (mice.length < targetMouseCount) addMouse();
 
       if (now - lastDirectionTime >= DIRECTION_INTERVAL) {
@@ -182,8 +209,9 @@ window.addEventListener("blur", () => keys.clear());
 
 window.addEventListener("resize", () => {
   const area = bounds();
-  cat.x = clamp(cat.x, area.minX, area.maxX);
-  cat.y = clamp(cat.y, area.minY, area.maxY);
+  const catArea = bounds(CAT_RADIUS);
+  cat.x = clamp(cat.x, catArea.minX, catArea.maxX);
+  cat.y = clamp(cat.y, catArea.minY, catArea.maxY);
   for (const mouse of mice) {
     mouse.x = clamp(mouse.x, area.minX, area.maxX);
     mouse.y = clamp(mouse.y, area.minY, area.maxY);
@@ -191,7 +219,7 @@ window.addEventListener("resize", () => {
   draw();
 });
 
-startButton.addEventListener("click", startGame);
-restartButton.addEventListener("click", startGame);
+startButton.addEventListener("click", beginCountdown);
+restartButton.addEventListener("click", beginCountdown);
 placeCharacters();
 requestAnimationFrame(update);

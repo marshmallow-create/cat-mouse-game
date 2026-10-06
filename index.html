@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ねこさんのネズミさがし</title>
+  <title>ラテのネズミさがし</title>
   <link rel="stylesheet" href="style.css">
   <script src="script.js" defer></script>
 </head>
@@ -11,9 +11,9 @@
   <main class="game-card">
     <header class="game-header">
       <div>
-        <p class="eyebrow">小さな　おにごっこ</p>
-        <h1>ねこさんのネズミさがし <span aria-hidden="true">🐱</span></h1>
-        <p class="intro">30秒でネズミを何匹つかまえられるかな？ 残り20秒と10秒でネズミが増えるよ！</p>
+        <p class="eyebrow">どんどん捕まえよう！</p>
+        <h1>ラテのネズミさがし <img class="title-cat" src="images/latte.png" alt=""></h1>
+        <p class="intro">30秒でネズミを何匹つかまえられるかな？ 5秒ごとにネズミが1匹増えるよ！</p>
       </div>
       <div class="status" aria-label="ゲームの記録">
         <div class="status-item"><span>スコア</span><strong id="score">0</strong></div>
@@ -23,25 +23,25 @@
 
     <section class="field-wrap" aria-label="ゲーム画面">
       <div id="field" class="field">
-        <span class="flower flower-one" aria-hidden="true">✿</span>
-        <span class="flower flower-two" aria-hidden="true">✿</span>
-        <span class="flower flower-three" aria-hidden="true">✿</span>
-        <span class="flower flower-four" aria-hidden="true">✿</span>
-        <div id="cat" class="character cat" role="img" aria-label="猫">🐱</div>
-        <div id="mouse" class="character mouse" role="img" aria-label="ネズミ">🐭</div>
+        <img id="cat" class="character cat" src="images/latte.png" alt="猫" draggable="false">
+        <img id="mouse" class="character mouse" src="images/ネズミ.png" alt="ネズミ" draggable="false">
 
         <div id="start-screen" class="overlay">
           <div class="result-card">
-            <div class="result-emoji" aria-hidden="true">🐱🐭</div>
+            <div class="result-emoji" aria-hidden="true"><img class="result-cat" src="images/latte.png" alt=""><img class="result-mouse" src="images/ネズミ.png" alt=""></div>
             <h2>準備はいい？</h2>
-            <p>STARTを押したら30秒のゲームが始まるよ</p>
+            <p>STARTを押したら3秒後にゲームが始まるよ</p>
             <button id="start" type="button">START</button>
           </div>
         </div>
 
+        <div id="countdown-screen" class="overlay countdown-screen" hidden aria-label="開始までのカウントダウン">
+          <span id="countdown-number" class="countdown-number" aria-live="polite">3</span>
+        </div>
+
         <div id="game-over" class="overlay" hidden>
           <div class="result-card">
-            <div class="result-emoji" aria-hidden="true">🐱✨</div>
+            <div class="result-emoji" aria-hidden="true"><img class="result-cat" src="images/latte.png" alt="">✨</div>
             <h2>おつかれさま！</h2>
             <p>ネズミを <strong id="final-score">0</strong> 匹つかまえたよ</p>
             <button id="restart" type="button">START <small>もう一度遊ぶ</small></button>

@@ -36,13 +36,14 @@ body {
 .eyebrow {
   margin: 0 0 7px;
   color: #db887d;
-  font-size: 13px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: .15em;
 }
 
-h1 { margin: 0; color: #2872b8; font-size: clamp(24px, 3.5vw, 34px); line-height: 1.3; }
-.intro { margin: 8px 0 0; color: #66816d; font-size: 14px; }
+h1 { margin: 0; color: #005566; font-size: clamp(24px, 3.5vw, 34px); line-height: 1.3; }
+.title-cat { width: 42px; height: 42px; object-fit: contain; vertical-align: middle; }
+.intro { margin: 8px 0 0; color: #66816d; font-size: 17px; }
 
 .status { display: flex; flex: none; gap: 10px; }
 .status-item {
@@ -60,34 +61,19 @@ h1 { margin: 0; color: #2872b8; font-size: clamp(24px, 3.5vw, 34px); line-height
 .field-wrap {
   padding: 10px;
   border-radius: 27px;
-  background: #d6efc3;
-  box-shadow: inset 0 0 0 2px #b6dda3;
+  background: #b8a58d;
+  box-shadow: inset 0 0 0 2px #8f7961;
 }
 
 .field {
   position: relative;
   height: clamp(340px, 52vw, 510px);
   overflow: hidden;
-  border: 3px solid #fff9dc;
+  border: 3px solid #e8ddd0;
   border-radius: 20px;
-  background-color: #bce8a7;
-  background-image: radial-gradient(ellipse at 12% 18%, #d3f0b2 0 8%, transparent 8.2%),
-                    radial-gradient(ellipse at 70% 65%, #a9df99 0 13%, transparent 13.2%),
-                    radial-gradient(ellipse at 95% 17%, #d3f0b2 0 10%, transparent 10.2%),
-                    repeating-linear-gradient(115deg, transparent 0 41px, #ffffff16 42px 45px);
+  background: #aaa096 url("images/alley.png") center / cover no-repeat;
+  box-shadow: inset 0 0 24px #3b302a52;
 }
-
-.flower {
-  position: absolute;
-  color: #fff4a3;
-  font-size: 28px;
-  text-shadow: 0 2px 0 #e4b967;
-  pointer-events: none;
-}
-.flower-one { top: 12%; left: 11%; }
-.flower-two { top: 75%; left: 28%; color: #ffc9d6; }
-.flower-three { top: 24%; right: 15%; color: #ffc9d6; }
-.flower-four { bottom: 11%; right: 11%; }
 
 .character {
   position: absolute;
@@ -101,9 +87,10 @@ h1 { margin: 0; color: #2872b8; font-size: clamp(24px, 3.5vw, 34px); line-height
   line-height: 1;
   user-select: none;
   pointer-events: none;
-  filter: drop-shadow(0 5px 3px #4b86594a);
+  filter: drop-shadow(0 0 4px #ffffffd9) drop-shadow(0 5px 4px #24411db3);
 }
-.cat { z-index: 2; }
+.cat { z-index: 2; width: 72px; height: 72px; object-fit: contain; }
+.mouse { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; }
 
 .overlay {
   position: absolute;
@@ -112,9 +99,17 @@ h1 { margin: 0; color: #2872b8; font-size: clamp(24px, 3.5vw, 34px); line-height
   display: grid;
   place-items: center;
   padding: 20px;
-  background: #305c3e91;
+  background: #332c2b88;
 }
 .overlay[hidden] { display: none; }
+.countdown-screen { background: #332c2b66; }
+.countdown-number {
+  color: #fffdf4;
+  font-size: clamp(100px, 20vw, 180px);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 7px 0 #d56e63, 0 14px 30px #2b2424aa;
+}
 .result-card {
   width: min(100%, 340px);
   padding: 28px;
@@ -125,6 +120,8 @@ h1 { margin: 0; color: #2872b8; font-size: clamp(24px, 3.5vw, 34px); line-height
   text-align: center;
 }
 .result-emoji { font-size: 46px; }
+.result-cat { width: 72px; height: 72px; object-fit: contain; vertical-align: middle; }
+.result-mouse { width: 72px; height: 54px; object-fit: cover; border-radius: 10px; vertical-align: middle; }
 .result-card h2 { margin: 8px 0; font-size: 26px; }
 .result-card p { margin: 0 0 22px; }
 .result-card p strong { color: #dd796d; font-size: 26px; }
