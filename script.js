@@ -75,7 +75,7 @@ function placeMouse(mouse) {
 function addMouse() {
   const element = document.createElement("img");
   element.className = "character mouse";
-  element.src = "images/ネズミ.png";
+  element.src = "images/mouse.png";
   element.alt = "ネズミ";
   element.draggable = false;
   field.appendChild(element);
