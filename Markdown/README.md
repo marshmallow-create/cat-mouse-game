@@ -2,6 +2,8 @@
 
 この段階では、Node.jsのサーバーからゲームのファイルを受け取り、ブラウザで遊べるようにします。ロードマップと進捗は `LEARNING_PLAN.md` に記録しています。
 
+段階2のPostgreSQLとSQLの学習手順は [DATABASE_STAGE2.md](DATABASE_STAGE2.md) を参照してください。
+
 ## 起動と停止
 
 PowerShellでプロジェクトのフォルダーに移動して起動します。

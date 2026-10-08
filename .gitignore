@@ -1,0 +1,6 @@
+# Local database binaries, data, logs and credentials
+.local/
+node_modules/
+.env
+.env.*
+!.env.example

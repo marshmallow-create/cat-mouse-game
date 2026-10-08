@@ -10,20 +10,28 @@ const countdownNumberElement = document.getElementById("countdown-number");
 const gameOverElement = document.getElementById("game-over");
 const finalScoreElement = document.getElementById("final-score");
 const restartButton = document.getElementById("restart");
+const boostStatusElement = document.getElementById("boost-status");
 
 const GAME_LENGTH = 30; // 秒
 const COUNTDOWN_LENGTH = 3000; // ミリ秒
 const MOUSE_SPAWN_INTERVAL = 5000; // ミリ秒
+const STRAWBERRY_SPAWN_INTERVAL = 5000;
+const BOOST_DURATION = 5000;
+const STRAWBERRY_RADIUS = 22;
 const CAT_SPEED = 270; // 1秒に進むピクセル数
 const MOUSE_SPEED = 115;
 const CHARACTER_RADIUS = 27;
 const CAT_RADIUS = 36;
+const PICKUP_DISTANCE = CAT_RADIUS + STRAWBERRY_RADIUS;
 const CATCH_DISTANCE = 48;
 const DIRECTION_INTERVAL = 850; // ミリ秒
 
 const keys = new Set();
 const cat = { x: 0, y: 0 };
 const mice = [{ element: mouseElement, x: 0, y: 0, dx: 0, dy: 0 }];
+const strawberries = [];
+let spawnedStrawberryCount = 0;
+let boostUntil = 0;
 let score = 0;
 let startTime = 0;
 let previousTime = 0;
@@ -52,6 +60,44 @@ function draw() {
     mouse.element.style.left = `${mouse.x}px`;
     mouse.element.style.top = `${mouse.y}px`;
   }
+  for (const strawberry of strawberries) {
+    strawberry.element.style.left = `${strawberry.x}px`;
+    strawberry.element.style.top = `${strawberry.y}px`;
+  }
+}
+
+function addStrawberry() {
+  const element = document.createElement("span");
+  element.className = "character strawberry";
+  element.textContent = "🍓";
+  element.setAttribute("role", "img");
+  element.setAttribute("aria-label", "苺：5秒間スピード2倍");
+  const area = bounds(STRAWBERRY_RADIUS);
+  const strawberry = { element, x: 0, y: 0 };
+  // ラテの真下に出現して即座に取得されるのを避ける。
+  for (let attempt = 0; attempt < 30; attempt++) {
+    strawberry.x = area.minX + Math.random() * (area.maxX - area.minX);
+    strawberry.y = area.minY + Math.random() * (area.maxY - area.minY);
+    if (Math.hypot(strawberry.x - cat.x, strawberry.y - cat.y) > PICKUP_DISTANCE + 20) break;
+  }
+  strawberries.push(strawberry);
+  field.appendChild(element);
+}
+
+function updateBoostStatus(now) {
+  const active = now < boostUntil;
+  catElement.classList.toggle("boosted", active);
+  boostStatusElement.hidden = !active;
+  boostStatusElement.textContent = active
+    ? `🍓 スピード2倍！ あと${Math.ceil((boostUntil - now) / 1000)}秒`
+    : "";
+}
+
+function resetStrawberries() {
+  while (strawberries.length) strawberries.pop().element.remove();
+  spawnedStrawberryCount = 0;
+  boostUntil = 0;
+  updateBoostStatus(0);
 }
 
 function chooseMouseDirection(mouse) {
@@ -100,6 +146,7 @@ function placeCharacters() {
 }
 
 function beginCountdown() {
+  resetStrawberries();
   placeCharacters();
   score = 0;
   scoreElement.textContent = "0";
@@ -125,6 +172,7 @@ function startGame(now) {
 
 function endGame() {
   playing = false;
+  resetStrawberries();
   keys.clear();
   timeElement.textContent = "0";
   finalScoreElement.textContent = String(score);
@@ -158,9 +206,26 @@ function update(now) {
       const vertical = Number(keys.has("arrowdown") || keys.has("s"))
         - Number(keys.has("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
+      const catSpeed = CAT_SPEED * (now < boostUntil ? 2 : 1);
 
-      cat.x = clamp(cat.x + horizontal / length * CAT_SPEED * seconds, catArea.minX, catArea.maxX);
-      cat.y = clamp(cat.y + vertical / length * CAT_SPEED * seconds, catArea.minY, catArea.maxY);
+      cat.x = clamp(cat.x + horizontal / length * catSpeed * seconds, catArea.minX, catArea.maxX);
+      cat.y = clamp(cat.y + vertical / length * catSpeed * seconds, catArea.minY, catArea.maxY);
+
+      const targetStrawberryCount = Math.floor((now - startTime) / STRAWBERRY_SPAWN_INTERVAL);
+      while (spawnedStrawberryCount < targetStrawberryCount) {
+        addStrawberry();
+        spawnedStrawberryCount++;
+      }
+      for (let index = strawberries.length - 1; index >= 0; index--) {
+        const strawberry = strawberries[index];
+        if (Math.hypot(cat.x - strawberry.x, cat.y - strawberry.y) < PICKUP_DISTANCE) {
+          strawberry.element.remove();
+          strawberries.splice(index, 1);
+          // 効果は重ねず、最後に取得してから5秒間に更新する。
+          boostUntil = now + BOOST_DURATION;
+        }
+      }
+      updateBoostStatus(now);
 
       // 開始から5秒ごとにネズミを1匹追加する。
       const targetMouseCount = 1 + Math.floor((now - startTime) / MOUSE_SPAWN_INTERVAL);
@@ -215,6 +280,11 @@ window.addEventListener("resize", () => {
   for (const mouse of mice) {
     mouse.x = clamp(mouse.x, area.minX, area.maxX);
     mouse.y = clamp(mouse.y, area.minY, area.maxY);
+  }
+  const strawberryArea = bounds(STRAWBERRY_RADIUS);
+  for (const strawberry of strawberries) {
+    strawberry.x = clamp(strawberry.x, strawberryArea.minX, strawberryArea.maxX);
+    strawberry.y = clamp(strawberry.y, strawberryArea.minY, strawberryArea.maxY);
   }
   draw();
 });
