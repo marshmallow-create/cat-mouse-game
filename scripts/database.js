@@ -18,7 +18,7 @@ const DATABASE = "latte_game";
 // PostgreSQL公式Windowsページが紹介するEDBのWindows用ZIP。
 const DOWNLOAD_URL = "https://get.enterprisedb.com/postgresql/postgresql-18.6-5-windows-x64-binaries.zip";
 
-function runTool(name, args, capture = false) {
+function runTool(name, args, capture = false, input) {
   // 起動時の出力をファイルに向け、バックグラウンドのPostgreSQLが
   // 呼び出し元のターミナルや出力パイプを保持しないようにします。
   const launching = name === "pg_ctl" && args.includes("start");
@@ -35,6 +35,7 @@ function runTool(name, args, capture = false) {
       },
       stdio: launching ? ["ignore", logHandle, logHandle] : capture ? "pipe" : "inherit",
       encoding: "utf8",
+      input,
       windowsHide: true
     });
   } finally {
@@ -121,7 +122,7 @@ function start() {
 
 async function main() {
   const action = process.argv[2];
-  if (action === "setup") {
+  if (action === "setup" || action === "api-setup" || action === "auth-setup") {
     await install();
     initialize();
     start();
@@ -131,7 +132,39 @@ async function main() {
       runTool("createdb", ["-w", "-h", HOST, "-p", PORT, "-U", USER, DATABASE]);
     }
     runTool("psql", [...psqlArgs(), "-f", path.join(projectDir, "database", "schema.sql")]);
-    console.log("Setup complete. Try: npm run db:practice");
+    if (action === "api-setup" || action === "auth-setup") {
+      runTool("psql", [...psqlArgs(), "-f", path.join(projectDir, "database", "stage3.sql")]);
+      const configFile = path.join(localDir, "app-connection.json");
+      const password = fs.existsSync(configFile)
+        ? JSON.parse(fs.readFileSync(configFile, "utf8")).password
+        : crypto.randomBytes(24).toString("hex");
+      if (!/^[a-f0-9]{48}$/.test(password)) throw new Error("Invalid application password configuration.");
+      // パスワードは標準入力で渡し、コマンドラインやログに含めません。
+      const roleSql = `
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'latte_app') THEN
+            CREATE ROLE latte_app LOGIN;
+          END IF;
+        END $$;
+        ALTER ROLE latte_app WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+          NOINHERIT NOREPLICATION NOBYPASSRLS PASSWORD '${password}';
+        REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+        GRANT CONNECT ON DATABASE latte_game TO latte_app;
+        GRANT USAGE ON SCHEMA public TO latte_app;
+        GRANT SELECT, INSERT ON game_results TO latte_app;
+        GRANT USAGE ON SEQUENCE game_results_id_seq TO latte_app;
+      `;
+      runTool("psql", [...psqlArgs(), "-f", "-"], true, roleSql);
+      fs.writeFileSync(configFile, JSON.stringify({ host: HOST, port: Number(PORT),
+        user: "latte_app", database: DATABASE, password }, null, 2), { mode: 0o600 });
+      console.log("API database setup complete. Connection credentials stay in .local/.");
+      if (action === "auth-setup") {
+        runTool("psql", [...psqlArgs(), "-f", path.join(projectDir, "database", "stage4.sql")]);
+        console.log("Stage 4 authentication database setup complete. Existing results are preserved.");
+      }
+    } else {
+      console.log("Setup complete. Try: npm run db:practice");
+    }
   } else if (action === "start") {
     start();
   } else if (action === "stop") {
@@ -146,7 +179,7 @@ async function main() {
       : process.argv.slice(3);
     runTool("psql", [...psqlArgs(), ...extra]);
   } else {
-    throw new Error("Choose: setup, start, stop, status, shell, practice.");
+    throw new Error("Choose: setup, api-setup, auth-setup, start, stop, status, shell, practice.");
   }
 }
 

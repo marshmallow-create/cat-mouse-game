@@ -4,30 +4,36 @@
 
 段階2のPostgreSQLとSQLの学習手順は [DATABASE_STAGE2.md](DATABASE_STAGE2.md) を参照してください。
 
+保存・ランキングAPIを学ぶ段階3は [DATABASE_STAGE3.md](DATABASE_STAGE3.md) を参照してください。
+
+登録・ログインの学習内容は [DATABASE_STAGE4.md](DATABASE_STAGE4.md) を参照してください。現在のDBはSupabaseへ移行済みです。ブラウザでデータを確認する方法と接続設定は [SUPABASE.md](SUPABASE.md) にあります。
+
+GitHub・Render・Supabaseで共有する段階5の公開設定と、スマホ操作・バックアップ復元は [DEPLOY_STAGE5.md](DEPLOY_STAGE5.md) にまとめています。
+
 ## 起動と停止
 
 PowerShellでプロジェクトのフォルダーに移動して起動します。
 
 ```powershell
 cd C:\marshmallow\codex_projects\cat-mouse-game
-node server.js
+npm.cmd start
 ```
 
-`ゲームを開く: http://localhost:3000` と表示されたら、ブラウザでそのアドレスを開きます。起動したターミナルは開いたままにしてください。STARTを押すと3秒のカウントダウン後にゲームが始まります。
+`ゲームを開く: http://localhost:3000` と表示されたら、ブラウザでそのアドレスを開きます。起動したターミナルは開いたままにしてください。現在は登録またはログイン後にSTARTを押すと、3秒のカウントダウン後にゲームが始まります。
 
-停止するときは、ターミナルで **Ctrl + C** を押します。再開するときは、もう一度 `node server.js` を実行します。
+停止するときは、ターミナルで **Ctrl + C** を押します。再開は上記の起動手順です。Supabase使用時はローカルPostgreSQLの起動・停止は不要です。
 
-Node.js 22以上が必要です。`node --version` で確認できます。この段階では外部ライブラリがないため、`npm install` は不要です。`package.json` に起動方法を登録してあるので、`npm start` でも同じサーバーを起動できます。
+Node.js 22以上が必要です。`node --version` で確認できます。新しい環境では `npm.cmd ci` を実行し、Supabase接続用の `.env` とCA証明書を別途用意します。接続パスワードはGitに含めません。`node --env-file-if-exists=.env scripts/server.js` でも同じサーバーを起動できます。ローカルDBで学習する場合の準備は `DATABASE_STAGE4.md` にあります。
 
 ## 今回増えたファイル
 
 | ファイル | 役割 |
 |---|---|
-| `server.js` | Node.jsで動き、ブラウザからの要求にファイルを返す |
+| `scripts/server.js` | Node.jsで動き、ブラウザからの要求にファイルを返す |
 | `package.json` | プロジェクト名や起動コマンドを記録する |
 | `Markdown/README.md` | 起動方法、仕組み、学習用の確認例を説明する |
 
-`index.html`、`style.css`、`script.js`、`images/` はブラウザへ配信するファイルです。特に `script.js` はゲームを動かすブラウザ側のJavaScript、`server.js` は要求を受け付けるサーバー側のJavaScriptです。
+`index.html`、`style.css`、`scripts/script.js`、`images/` はブラウザへ配信するファイルです。特に `scripts/script.js` はゲームを動かすブラウザ側のJavaScript、`scripts/server.js` は要求を受け付けるサーバー側のJavaScriptです。
 
 ## ブラウザから画面が表示されるまで
 
@@ -48,7 +54,7 @@ Node.js 22以上が必要です。`node --version` で確認できます。こ�
 
 `file:///.../index.html` で開くと、ブラウザは直接PCのファイルを読みます。`http://localhost:3000` で開くと、Node.jsのサーバーを通して受け取ります。将来はこの窓口に「記録を保存して」「ランキングを取得して」というAPIを追加します。
 
-## server.jsの読み方
+## scripts/server.jsの読み方
 
 上から順に、次のまとまりとして読むと理解しやすくなります。
 
@@ -57,7 +63,7 @@ Node.js 22以上が必要です。`node --version` で確認できます。こ�
 3. **要求を受けたときの処理を書く**：URLを調べ、ファイルを読み、レスポンスを返します。`await` はファイルの読み込みが終わるまで、その処理の続きを待つための書き方です。
 4. **待ち受けを始める**：`server.listen` でポート3000を開きます。
 
-サーバーは対応表に登録したゲーム用ファイルを配信します。`server.js` や、将来のデータベース接続設定はブラウザに配信しません。日本語の画像名も扱えるよう、URLの文字を復元してから対応表を確認しています。
+サーバーは対応表に登録したゲーム用ファイルを配信します。`scripts/server.js` や、将来のデータベース接続設定はブラウザに配信しません。日本語の画像名も扱えるよう、URLの文字を復元してから対応表を確認しています。
 
 ## 自分で試す確認例
 
@@ -68,7 +74,7 @@ Node.js 22以上が必要です。`node --version` で確認できます。こ�
 ```text
 GET / → 200
 GET /style.css → 200
-GET /script.js → 200
+GET /scripts/script.js → 200
 ```
 
 画像の要求も表示されます。`GET` は「内容を取得したい」という要求です。日本語の画像名はURL上で `%` を含む文字列に変換されるため、ログでは見た目が変わることがあります。
@@ -91,13 +97,13 @@ Ctrl + Cで停止し、ブラウザを再読み込みします。サーバーが
 
   ```powershell
   $env:PORT = "3001"
-  node server.js
+  node scripts/server.js
   ```
 
   表示された `http://localhost:3001` を開きます。この環境変数は現在のターミナルに残るので、3000へ戻す場合は `$env:PORT = "3000"` と指定します。
 
-- **npm startがPowerShellで実行できない**：`node server.js` で起動できます。
-- **追加した画像が表示されない**：`server.js` の対応表に、その画像のURLとファイル名を登録します。
+- **npm startがPowerShellで実行できない**：`node scripts/server.js` で起動できます。
+- **追加した画像が表示されない**：`scripts/server.js` の対応表に、その画像のURLとファイル名を登録します。
 - **サーバーのコードを変更した**：Ctrl + Cで停止してから再起動します。HTML・CSS・ゲーム用JavaScript・画像の変更はブラウザの再読み込みで反映されます。
 
 ## 会社用システムへのつながり

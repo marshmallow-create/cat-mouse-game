@@ -3,24 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ラテのネズミさがし</title>
+  <title>レチェとラテ</title>
   <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
+  <script src="scripts/script.js" defer></script>
 </head>
 <body>
   <main class="game-card">
     <header class="game-header">
       <div>
         <p class="eyebrow">どんどん捕まえよう！</p>
-        <h1>ラテのネズミさがし <img class="title-cat" src="images/latte.png" alt=""></h1>
-        <p class="intro">30秒でネズミを何匹つかまえられるかな？ 5秒ごとにネズミが1匹増えるよ！</p>
-        <p class="intro">🍓 5秒ごとに苺が出現！ 取ると5秒間、ラテのスピードが2倍になるよ！</p>
+        <h1><img class="title-cat" src="images/leche.png" alt=""><span>レチェとラテ</span><img class="title-cat" src="images/latte.png" alt=""></h1>
+        <p class="intro" data-game-only hidden>30秒でネズミを何匹つかまえられるかな？ 5秒ごとにネズミが1匹増えるよ！</p>
       </div>
-      <div class="status" aria-label="ゲームの記録">
+      <div class="status" aria-label="ゲームの記録" data-game-only hidden>
         <div class="status-item"><span>スコア</span><strong id="score">0</strong></div>
         <div class="status-item"><span>残り時間</span><strong><span id="time">30</span><small>秒</small></strong></div>
       </div>
     </header>
+
+    <div id="game-content" data-game-only hidden>
+    <fieldset id="cat-selection" class="cat-selection" hidden>
+      <legend>どちらの猫で遊ぶ？</legend>
+      <div class="cat-options">
+        <label class="cat-option"><input type="radio" name="play-cat" value="leche"><span><img src="images/leche.png" alt=""><strong>レチェ</strong><small>🐟 鰹節が5秒ごとに出現！<br>取ると5秒間スピードが2倍になるよ！</small></span></label>
+        <label class="cat-option"><input type="radio" name="play-cat" value="latte" checked><span><img src="images/latte.png" alt=""><strong>ラテ</strong><small>🍓 苺が5秒ごとに出現！<br>取ると5秒間スピードが2倍になるよ！</small></span></label>
+      </div>
+    </fieldset>
 
     <section class="field-wrap" aria-label="ゲーム画面">
       <div id="field" class="field">
@@ -30,10 +38,10 @@
 
         <div id="start-screen" class="overlay">
           <div class="result-card">
-            <div class="result-emoji" aria-hidden="true"><img class="result-cat" src="images/latte.png" alt=""><img class="result-mouse" src="images/mouse.png" alt=""></div>
+            <div class="result-emoji" aria-hidden="true"><img id="start-cat" class="result-cat" src="images/latte.png" alt=""></div>
             <h2>準備はいい？</h2>
             <p>STARTを押したら3秒後にゲームが始まるよ</p>
-            <button id="start" type="button">START</button>
+            <button id="start" type="button" disabled>START</button>
           </div>
         </div>
 
@@ -43,9 +51,10 @@
 
         <div id="game-over" class="overlay" hidden>
           <div class="result-card">
-            <div class="result-emoji" aria-hidden="true"><img class="result-cat" src="images/latte.png" alt="">✨</div>
+            <div class="result-emoji" aria-hidden="true"><img id="result-cat" class="result-cat" src="images/latte.png" alt="">✨</div>
             <h2>おつかれさま！</h2>
             <p>ネズミを <strong id="final-score">0</strong> 匹つかまえたよ</p>
+            <p id="result-save-message" class="save-message" aria-live="polite"></p>
             <button id="restart" type="button">START <small>もう一度遊ぶ</small></button>
           </div>
         </div>
@@ -53,6 +62,49 @@
     </section>
 
     <p class="instructions"><span aria-hidden="true">⌨️</span> 矢印キー または <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> で猫を動かそう</p>
+    <div class="touch-controls" role="group" aria-label="スマホ用の移動ボタン">
+      <button type="button" data-direction="arrowup" aria-label="上へ移動">↑</button>
+      <div>
+        <button type="button" data-direction="arrowleft" aria-label="左へ移動">←</button>
+        <button type="button" data-direction="arrowdown" aria-label="下へ移動">↓</button>
+        <button type="button" data-direction="arrowright" aria-label="右へ移動">→</button>
+      </div>
+      <p>ボタンを押し続けて移動できるよ！</p>
+    </div>
+
+    <section class="ranking" aria-labelledby="ranking-title">
+      <div class="ranking-header">
+        <h2 id="ranking-title">自己ベストランキング</h2>
+        <button id="refresh-ranking" class="secondary-button" type="button">更新する</button>
+      </div>
+      <p class="ranking-description">ログイン中の利用者の記録の上位10件。同点なら新しい記録が先に並びます。</p>
+      <p id="ranking-message" class="save-message" aria-live="polite">記録を読み込んでいます…</p>
+      <div class="ranking-table-wrap">
+        <table class="ranking-table">
+          <thead><tr><th scope="col">順位</th><th scope="col">スコア</th><th scope="col">遊んだ日時</th></tr></thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+      </div>
+      <p id="save-status" class="save-message" aria-live="polite"></p>
+      <button id="retry-save" class="secondary-button" type="button" hidden>保存を再試行する</button>
+    </section>
+    </div>
+    <section class="account" aria-labelledby="account-title">
+      <h2 id="account-title">ログイン</h2>
+      <div class="account-status">
+        <p id="account-message" class="save-message" aria-live="polite">ログイン状態を確認しています…</p>
+        <button id="logout" type="button" class="secondary-button" hidden>ログアウト</button>
+      </div>
+      <form id="account-form">
+        <label>利用者名 <input id="username" name="username" autocomplete="username" required pattern="[a-zA-Z0-9_]{3,32}" minlength="3" maxlength="32" aria-describedby="account-help"></label>
+        <label>パスワード <input id="password" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="128" aria-describedby="account-help"></label>
+        <p id="account-help">利用者名：半角英数字・_で3〜32文字。パスワード：12〜128文字。</p>
+        <div class="account-actions">
+          <button id="login" type="submit" class="secondary-button">ログイン</button>
+          <button id="register" type="submit" class="secondary-button">新規登録して始める</button>
+        </div>
+      </form>
+    </section>
   </main>
 </body>
 </html>
