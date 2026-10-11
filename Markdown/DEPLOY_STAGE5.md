@@ -12,7 +12,7 @@
 - RenderのDB接続は、利用者がConnect画面で確認した `aws-0-ap-northeast-1.pooler.supabase.com:5432` のSession poolerへ切り替えました。直接接続の `ENETUNREACH` は解消し、TLSの証明書確認とゲーム専用ロールを維持しています。ローカルの接続設定は保持しています。
 - 公開APIで2人分の登録・ログイン・ログアウト・保存・二重保存防止・ランキング分離を確認しました。Edgeの公開画面で、スマホ幅のタッチ移動・停止、30秒のプレイ・自動保存・再読み込み後の記録保持も確認済みです。
 - Renderの再デプロイ後もログインと保存済み記録を確認しました。検証用アカウントと記録は削除し、既存の1利用者・3記録を保持しています。
-- 利用者が実際のスマホから記録を保存できたと確認しました。別端末から共有DBへ保存する到達点は確認済みです。現在は運用設定を進めています。スマホUI・UXの課題は別途整理・改善します。
+- 利用者が実際のスマホから記録を保存できたと確認しました。別端末から共有DBへ保存する到達点と、RenderのHTTP稼働確認設定は確認済みです。段階5の基本機能は完了しました。スマホUI・UXの課題は別途整理・改善します。
 
 ## 3つのサービスの役割
 
@@ -40,11 +40,11 @@ Renderアカウントを接続し、GitHubの `marshmallow-create/cat-mouse-game
 | Health Check Path | `/healthz` |
 | 自動デプロイ | off（確認後に手動で公開） |
 
-接続ツールで作成した実サービスではHealth Check Pathは未設定です。DB接続が正常になったら、RenderのSettingsで `/healthz` を設定します。これは「画面が返る」だけでなく「記録の保存先へ接続できる」ことをRenderが確認するための設定です。
+実サービスのHealth Check Pathは `/healthz` に設定済みです。これは「画面が返る」だけでなく「記録の保存先へ接続できる」ことをRenderが確認するための設定です。
 
 ### 稼働確認を設定する
 
-2026-10-11の確認では、実サービスのHealth Check Pathは空欄でした。空欄では既定のTCP確認が使われ、サーバーの接続受付だけを確認します。`/healthz` に切り替えると、サーバーがSupabaseへ簡単なSQLを実行し、保存先にも接続できることを確認します。[Render公式の稼働確認](https://render.com/docs/health-checks)
+2026-10-11に利用者が管理画面で保存し、接続ツールで `/healthz` の反映と最新デプロイの `live` を確認しました。公開URLも200・`ok` を返しました。変更前の空欄では既定のTCP確認が使われ、サーバーの接続受付だけを確認していました。`/healthz` ではサーバーがSupabaseへ簡単なSQLを実行し、保存先にも接続できることを確認します。[Render公式の稼働確認](https://render.com/docs/health-checks)
 
 1. [cat-mouse-gameの設定画面](https://dashboard.render.com/web/srv-db5n8pjbc2fs739fjaog/settings)を開きます。
 2. **Health Checks** の **Health Check Path** にある **Edit** を押します。
