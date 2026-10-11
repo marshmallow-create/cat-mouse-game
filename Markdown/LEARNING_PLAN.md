@@ -93,7 +93,7 @@
 
 ## 段階5：複数の人で使う
 
-状態：RenderのHTTPS画面を公開済み（DB接続の切り替えと別端末の保存確認は未完了）
+状態：RenderのHTTPS公開・DB接続・API・ブラウザ検証済み（実機の別端末からの保存確認待ち）
 
 - 利用者名＋パスワード認証を維持し、まずDBをSupabaseに移してブラウザでデータを確認する方針。
 - 東京リージョンのcat-mouse-gameへDB移行済み。1利用者・7記録の全項目一致、採番、RLSとサーバー専用ロールを確認し、ローカルDBは保持。
@@ -108,8 +108,11 @@
 - 学習ガイド：`Markdown/DEPLOY_STAGE5.md`。GitHub・Render・Supabaseの役割、環境変数、HTTPS、ログ、無料枠、バックアップと復元を解説。
 - 2026-10-11：確認済みの `marshmallow's workspace` にFree・SingaporeのWeb Serviceを作成。公開用ブランチのビルドと起動が成功し、`https://cat-mouse-game.onrender.com` を公開。サービスIDは `srv-db5n8pjbc2fs739fjaog`、自動デプロイはoff。
 - 公開確認：画面・CSS・JavaScript・4画像の取得、サーバー側ファイルと秘密情報の非配信、HTTPSのセキュリティヘッダー、別OriginのPOST拒否を確認。
-- 未完了：RenderからSupabase直接接続へは `ENETUNREACH`。`/healthz` とログインは503。IPv4対応のSession poolerの正式なホスト名を利用者に確認中。パスワードとCA証明書はサーバー環境変数に設定済み。ローカルのSupabase接続は正常で、既存の1利用者・3記録は保持。
-- Render接続ツールはHealth Check Pathを指定できないため、実サービスでは未設定。DB接続の切り替え後にDashboardのSettingsで `/healthz` を設定する。段階5は保存・利用者分離・別端末の確認まで完了扱いにしない。
+- DB接続：直接接続の `ENETUNREACH` を解消。利用者がConnect画面で確認した `aws-0-ap-northeast-1.pooler.supabase.com:5432` のSession poolerへRenderだけを切り替え、TLS証明書確認と `latte_app` 専用ロールを維持。ローカルの直接接続設定は保持。
+- 公開API：`/healthz` の200、2人分の登録・ログイン・ログアウト、Secure・HttpOnly・SameSite Cookie、保存と二重保存防止、利用者別ランキング、所有者偽装・他人のプレイ番号・CSRF・Originの拒否を確認。
+- 公開ブラウザ：EdgeでHTTPSの実画面を使用。390×844のスマホ幅でタッチ移動・指を離した際の停止、実時間30秒の終了・自動保存・再読み込み後の記録保持、PC幅で別利用者のランキング分離を確認。JavaScript例外0件。実際のスマホや別PCでの確認は未実施。
+- 再デプロイ後も2人のログインと保存済み記録を確認。検証用の2アカウント・3記録だけを削除し、既存の1利用者・3記録を保持。接続復旧後のログにDBエラーなし。
+- Render接続ツールはHealth Check Pathを指定できないため、実サービスでは未設定。DashboardのSettingsで `/healthz` を設定する運用項目が残る。段階5は実機の別端末からの保存確認まで完了扱いにしない。
 
 - サーバーとPostgreSQLを共有利用できる環境に配置する。
 - 学ぶこと：公開環境と開発環境、HTTPS、環境変数、ログ、バックアップと復元。
