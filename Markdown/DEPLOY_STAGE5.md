@@ -12,7 +12,7 @@
 - RenderのDB接続は、利用者がConnect画面で確認した `aws-0-ap-northeast-1.pooler.supabase.com:5432` のSession poolerへ切り替えました。直接接続の `ENETUNREACH` は解消し、TLSの証明書確認とゲーム専用ロールを維持しています。ローカルの接続設定は保持しています。
 - 公開APIで2人分の登録・ログイン・ログアウト・保存・二重保存防止・ランキング分離を確認しました。Edgeの公開画面で、スマホ幅のタッチ移動・停止、30秒のプレイ・自動保存・再読み込み後の記録保持も確認済みです。
 - Renderの再デプロイ後もログインと保存済み記録を確認しました。検証用アカウントと記録は削除し、既存の1利用者・3記録を保持しています。
-- 実際のスマホや別PCからの保存確認が終わるまで、段階5は完了にはしません。次の「公開後に試すこと」で確認できます。
+- 利用者が実際のスマホから記録を保存できたと確認しました。別端末から共有DBへ保存する到達点は確認済みです。現在は運用設定を進めています。スマホUI・UXの課題は別途整理・改善します。
 
 ## 3つのサービスの役割
 
@@ -41,6 +41,17 @@ Renderアカウントを接続し、GitHubの `marshmallow-create/cat-mouse-game
 | 自動デプロイ | off（確認後に手動で公開） |
 
 接続ツールで作成した実サービスではHealth Check Pathは未設定です。DB接続が正常になったら、RenderのSettingsで `/healthz` を設定します。これは「画面が返る」だけでなく「記録の保存先へ接続できる」ことをRenderが確認するための設定です。
+
+### 稼働確認を設定する
+
+2026-10-11の確認では、実サービスのHealth Check Pathは空欄でした。空欄では既定のTCP確認が使われ、サーバーの接続受付だけを確認します。`/healthz` に切り替えると、サーバーがSupabaseへ簡単なSQLを実行し、保存先にも接続できることを確認します。[Render公式の稼働確認](https://render.com/docs/health-checks)
+
+1. [cat-mouse-gameの設定画面](https://dashboard.render.com/web/srv-db5n8pjbc2fs739fjaog/settings)を開きます。
+2. **Health Checks** の **Health Check Path** にある **Edit** を押します。
+3. `/healthz` を入力して **Save Changes** を押します。公開URL全体ではなく、パスだけを入力します。
+4. 保存後に設定値が `/healthz` であることと、[稼働確認URL](https://cat-mouse-game.onrender.com/healthz)が `ok` を返すことを確認します。
+
+現在の接続ツールにはこの設定を変更する機能がないため、管理画面での操作が必要です。保存後の設定値とデプロイ状態は接続ツールで確認できます。RenderはHTTP稼働確認で5秒以内の2xx・3xxを成功と判断します。業務システムでも、画面を表示できるだけでなく、必要なDBへ接続できるかを運用上の判断に使います。
 
 `render.yaml` は設定をまとめたBlueprintです。RenderのNew → Blueprintでリポジトリと公開用ブランチを指定するか、New → Web Serviceで上記を入力します。Node.jsは22系を指定します。[RenderのGit連携](https://render.com/docs/git-provider)、[Blueprint仕様](https://render.com/docs/blueprint-spec)
 
@@ -108,4 +119,4 @@ node scripts/restore-game-data.js .local/backups/実際のファイル名.json l
 
 Render Freeは15分アクセスがないと休止し、次のアクセスで起動まで約1分かかります。利用枠と外部DB通信の制限もあるため、まず小人数の学習用として使います。[Render Freeの仕様](https://render.com/docs/free)
 
-ローカルの公開設定テスト、Supabaseバックアップ、新規ローカルDBへの復元に加え、RenderのHTTPS入口を通したAPIとEdgeの実画面を確認済みです。実際のスマホや別PCによる保存と、既存利用者のパスワードでのログインは利用者自身の確認が残ります。業務用では、運用プラン・認証の復旧・監視・定期バックアップを整えてから利用範囲を広げます。
+ローカルの公開設定テスト、Supabaseバックアップ、新規ローカルDBへの復元に加え、RenderのHTTPS入口を通したAPIとEdgeの実画面を確認済みです。利用者から実際のスマホによる保存成功の報告も受けています。運用設定とスマホUI・UXの改善を続けます。業務用では、運用プラン・認証の復旧・監視・定期バックアップを整えてから利用範囲を広げます。
