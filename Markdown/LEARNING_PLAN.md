@@ -93,7 +93,7 @@
 
 ## 段階5：複数の人で使う
 
-状態：公開準備・ローカル検証済み（Renderへの接続とHTTPS公開は未実施）
+状態：RenderのHTTPS画面を公開済み（DB接続の切り替えと別端末の保存確認は未完了）
 
 - 利用者名＋パスワード認証を維持し、まずDBをSupabaseに移してブラウザでデータを確認する方針。
 - 東京リージョンのcat-mouse-gameへDB移行済み。1利用者・7記録の全項目一致、採番、RLSとサーバー専用ロールを確認し、ローカルDBは保持。
@@ -106,6 +106,10 @@
 - バックアップ：`npm.cmd run db:backup` で現在の接続先の利用者・プレイ結果・採番をGit管理外へ保存。`db:restore-check` は新しいローカル検証DBだけに復元。Supabaseから1利用者・3記録を控え、新しい検証DBへ復元を確認。通常のゲームDBとSupabaseの行は変更しない。
 - 検証：既存と公開設定の9項目のテストが成功。スマホ操作追加後のブラウザテストも成功。Render上の実際のHTTPSと別端末からの保存は公開後の確認事項として残す。
 - 学習ガイド：`Markdown/DEPLOY_STAGE5.md`。GitHub・Render・Supabaseの役割、環境変数、HTTPS、ログ、無料枠、バックアップと復元を解説。
+- 2026-10-11：確認済みの `marshmallow's workspace` にFree・SingaporeのWeb Serviceを作成。公開用ブランチのビルドと起動が成功し、`https://cat-mouse-game.onrender.com` を公開。サービスIDは `srv-db5n8pjbc2fs739fjaog`、自動デプロイはoff。
+- 公開確認：画面・CSS・JavaScript・4画像の取得、サーバー側ファイルと秘密情報の非配信、HTTPSのセキュリティヘッダー、別OriginのPOST拒否を確認。
+- 未完了：RenderからSupabase直接接続へは `ENETUNREACH`。`/healthz` とログインは503。IPv4対応のSession poolerの正式なホスト名を利用者に確認中。パスワードとCA証明書はサーバー環境変数に設定済み。ローカルのSupabase接続は正常で、既存の1利用者・3記録は保持。
+- Render接続ツールはHealth Check Pathを指定できないため、実サービスでは未設定。DB接続の切り替え後にDashboardのSettingsで `/healthz` を設定する。段階5は保存・利用者分離・別端末の確認まで完了扱いにしない。
 
 - サーバーとPostgreSQLを共有利用できる環境に配置する。
 - 学ぶこと：公開環境と開発環境、HTTPS、環境変数、ログ、バックアップと復元。

@@ -7,7 +7,10 @@
 - Render公開用の `render.yaml`、HTTPS用Cookie、固定の公開URL確認、稼働確認、ログを準備しました。
 - スマホ用の方向ボタン、指を離したときの停止、狭い画面での終了カード表示を追加しました。
 - DBのバックアップと、通常のゲームDBへ書き込まず新しいローカル検証DBへ復元する機能を追加しました。
-- 実際の公開URLと、別の端末からのアクセス確認はRenderへの接続・公開後に記録します。公開前は段階5を完了にはしません。
+- 公開URLは https://cat-mouse-game.onrender.com です。画面のHTTPS配信は確認済みですが、DB接続の切り替えが必要で、登録・ログイン・記録保存はまだ利用できません。
+- [Renderの管理画面](https://dashboard.render.com/web/srv-db5n8pjbc2fs739fjaog)で状況を確認できます。Free・Singapore、公開用ブランチ、自動デプロイoffで作成しました。
+- RenderからSupabase直接接続へは `ENETUNREACH` が発生しました。IPv4対応のSession poolerの正式なホスト名を確認して切り替えます。既存のSupabaseデータとローカルの接続設定は保持しています。
+- 公開後の保存と別端末からの確認が終わるまで、段階5は完了にはしません。
 
 ## 3つのサービスの役割
 
@@ -34,6 +37,8 @@ Renderアカウントを接続し、GitHubの `marshmallow-create/cat-mouse-game
 | Start Command | `npm start` |
 | Health Check Path | `/healthz` |
 | 自動デプロイ | off（確認後に手動で公開） |
+
+接続ツールで作成した実サービスではHealth Check Pathは未設定です。DB接続が正常になったら、RenderのSettingsで `/healthz` を設定します。これは「画面が返る」だけでなく「記録の保存先へ接続できる」ことをRenderが確認するための設定です。
 
 `render.yaml` は設定をまとめたBlueprintです。RenderのNew → Blueprintでリポジトリと公開用ブランチを指定するか、New → Web Serviceで上記を入力します。Node.jsは22系を指定します。[RenderのGit連携](https://render.com/docs/git-provider)、[Blueprint仕様](https://render.com/docs/blueprint-spec)
 
