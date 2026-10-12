@@ -95,7 +95,9 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("personalBestElement.hidden"), false);
     assert.equal(await evaluate("personalBestElement.textContent"), "自己ベスト：まだ記録がありません。");
     assert.equal(await evaluate("catSelectionElement.hidden"), false);
-    assert.ok(await evaluate("[...document.querySelectorAll('.cat-option small')].every(element => element.textContent.includes('5秒ごとに出現') && element.textContent.includes('5秒間スピードが2倍'))"));
+    assert.ok(await evaluate("[...document.querySelectorAll('.cat-option small')].every(element => element.textContent.includes('5秒ごとに出現'))"));
+    assert.ok(await evaluate("document.querySelector('input[value=leche]').closest('label').textContent.includes('7秒間スピードが2倍')"));
+    assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('5秒間スピードが2倍')"));
     assert.ok(await evaluate("document.querySelector('.field-wrap').getClientRects().length > 0 && document.querySelector('.ranking').getClientRects().length > 0"));
     await evaluate("document.querySelector('input[value=leche]').click()");
     assert.equal(await evaluate("catElement.getAttribute('src')"), "images/leche.png");
@@ -116,15 +118,17 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.ok(await evaluate(`cat.x > ${catX}`));
     await poll(() => evaluate("strawberries.length > 0"));
     assert.equal(await evaluate("strawberries[0].element.textContent"), "🐟");
-    assert.equal(await evaluate("strawberries[0].element.getAttribute('aria-label')"), "鰹節：5秒間スピード2倍");
+    assert.equal(await evaluate("strawberries[0].element.getAttribute('aria-label')"), "鰹節：7秒間スピード2倍");
     await evaluate("cat.x = strawberries[0].x; cat.y = strawberries[0].y");
     await poll(() => evaluate("catElement.classList.contains('boosted')"));
+    assert.ok(await evaluate("boostUntil - performance.now() > 6500 && boostUntil - performance.now() <= 7000"));
     assert.ok(await evaluate("boostStatusElement.textContent.includes('🐟')"));
     await poll(() => evaluate("!playing && !gameOverElement.hidden && !savingResults"), 35000);
     assert.equal(await evaluate("pendingResults.length"), 1);
     assert.equal(await evaluate("selectedCat"), "leche");
     assert.equal(await evaluate("timeElement.textContent"), "0");
-    assert.equal(await evaluate("mice.length"), 6);
+    assert.equal(await evaluate("mice.filter(mouse => !mouse.special).length"), 10);
+    assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 1);
     assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/leche.png");
     assert.equal(await evaluate("catSelectionElement.disabled"), false);
     await evaluate("document.querySelector('input[value=latte]').click()");
@@ -150,11 +154,45 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("startButton.click()");
     await poll(() => evaluate("playing"));
     assert.equal(await evaluate("catElement.getAttribute('src')"), "images/latte.png");
+    assert.equal(await evaluate("mice.some(mouse => mouse.special)"), false);
     await evaluate("startTime -= 5100");
     await poll(() => evaluate("strawberries.length > 0"));
     assert.equal(await evaluate("strawberries[0].element.textContent"), "🍓");
+    assert.equal(await evaluate("strawberries[0].element.getAttribute('aria-label')"), "苺：5秒間スピード2倍");
+    await evaluate("cat.x = strawberries[0].x; cat.y = strawberries[0].y");
+    await poll(() => evaluate("catElement.classList.contains('boosted')"));
+    assert.ok(await evaluate("boostUntil - performance.now() > 4500 && boostUntil - performance.now() <= 5000"));
+    // 残り11秒では不在、残り10秒で1匹だけ出現する。
+    await evaluate("startTime = performance.now() - 19000");
+    await delay(100);
+    assert.equal(await evaluate("mice.some(mouse => mouse.special)"), false);
+    await evaluate("startTime = performance.now() - 20001");
+    await poll(() => evaluate("mice.some(mouse => mouse.special)"));
+    assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 1);
+    assert.equal(await evaluate("mice.find(mouse => mouse.special).element.getAttribute('src')"), "images/mouse-busaiku.png");
+    await poll(() => evaluate("mice.find(mouse => mouse.special).element.complete && mice.find(mouse => mouse.special).element.naturalWidth === 180"));
+    // 次の実フレームの移動距離が通常速度115px/秒の3倍になる。
+    const movement = await evaluate(`new Promise(resolve => requestAnimationFrame(() => {
+      const special = mice.find(mouse => mouse.special);
+      cat.x = bounds().minX; cat.y = bounds().minY;
+      special.x = field.clientWidth / 2; special.y = field.clientHeight / 2;
+      special.dx = 1; special.dy = 0; lastDirectionTime = performance.now();
+      const x = special.x; const before = previousTime;
+      requestAnimationFrame(() => resolve({distance: special.x - x,
+        expected: 115 * 3 * characterScale * Math.min((previousTime - before) / 1000, 0.05)}));
+    }))`);
+    assert.ok(movement.distance > 0);
+    assert.ok(Math.abs(movement.distance - movement.expected) < 0.001);
+    // 捕獲で5P加点。通常ネズミの加点は1P。
+    const beforeSpecial = await evaluate("for (const mouse of mice.filter(mouse => !mouse.special)) { mouse.x = bounds().maxX; mouse.y = bounds().maxY; } const special = mice.find(mouse => mouse.special); cat.x = special.x; cat.y = special.y; score");
+    await poll(() => evaluate(`score === ${beforeSpecial + 5}`));
+    const beforeNormal = await evaluate("const normal = mice.find(mouse => !mouse.special); cat.x = normal.x; cat.y = normal.y; for (const mouse of mice.filter(mouse => mouse !== normal)) { mouse.x = bounds().minX; mouse.y = bounds().minY; } score");
+    await poll(() => evaluate(`score === ${beforeNormal + 1}`));
+    await evaluate("startTime = performance.now() - 27001");
+    await poll(() => evaluate("mice.filter(mouse => !mouse.special).length === 10"));
+    assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 1);
     await evaluate("score = 7; startTime = performance.now() - 30001");
-    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7匹（使用した猫：ラテ）'"));
+    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7P（使用した猫：ラテ）'"));
     assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'ラテ')"));
     assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/latte.png");
@@ -165,7 +203,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // テキスト入力上のゲームキーはpreventDefaultしない。
     assert.equal(await evaluate("const input = document.getElementById('username'); const event = new KeyboardEvent('keydown', {key:'a', bubbles:true, cancelable:true}); input.dispatchEvent(event); event.defaultPrevented"), false);
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}匹（使用した猫：レチェ）'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}P（使用した猫：レチェ）'`));
     assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'レチェ')"));
     assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[0])}) && rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     const aliceRows = (await admin.query("SELECT score FROM game_results WHERE user_id = $1", [aliceId])).rows;
@@ -174,6 +212,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // 別タブでBへログインした状況：Cookieだけ変わり、Aのゲーム画面は残る。
     await evaluate("startButton.click()");
     await poll(() => evaluate("playing"));
+    assert.equal(await evaluate("mice.some(mouse => mouse.special)"), false);
     assert.equal(await evaluate(`(async () => (await fetch('/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:${JSON.stringify(usernames[1])},password:'browser-password-12345'})})).status)()`), 200);
     await evaluate("score = 9; startTime = performance.now() - 30001");
     await poll(() => evaluate("!playing && !savingResults && pendingResults.length === 1"));
@@ -188,7 +227,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("logoutButton.click()");
     await poll(() => evaluate("currentUser === null && !authBusy"));
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}匹（使用した猫：${aliceScore > 9 ? "レチェ" : "ラテ"}）'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}P（使用した猫：${aliceScore > 9 ? "レチェ" : "ラテ"}）'`));
     assert.equal((await admin.query("SELECT count(*) FROM game_results WHERE user_id = $1", [aliceId])).rows[0].count, "2");
     assert.deepEqual(errors, []);
     // 縦向きでは開始を待ち、横向きで実際のタッチ入力を確認。

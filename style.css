@@ -104,8 +104,11 @@ h1 { display: flex; align-items: center; gap: 8px; margin: 0; color: #6550b5; fo
 }
 .cat { z-index: 2; width: calc(72px * var(--character-scale, 1)); height: calc(72px * var(--character-scale, 1)); object-fit: contain; }
 .mouse { width: calc(64px * var(--character-scale, 1)); height: calc(48px * var(--character-scale, 1)); object-fit: cover; border-radius: calc(10px * var(--character-scale, 1)); }
+.special-mouse { object-fit: contain; }
 .strawberry { width: calc(44px * var(--character-scale, 1)); height: calc(44px * var(--character-scale, 1)); font-size: calc(36px * var(--character-scale, 1)); }
 .cat.boosted { filter: drop-shadow(0 0 8px #ffe46b) drop-shadow(0 0 16px #ffb52e); }
+.riku { width: calc(72px * var(--character-scale, 1)); height: calc(72px * var(--character-scale, 1)); object-fit: contain; }
+.cat.stunned { filter: grayscale(0.8) drop-shadow(0 0 8px #6550b5); }
 .boost-status {
   position: absolute;
   z-index: 2;

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Node.jsとPostgreSQLを段階的に学ぶブラウザゲーム",
   "scripts": {
-    "test": "node --test --test-concurrency=1 tests/database-config.test.js tests/static-assets.test.js tests/stage3.test.js tests/stage4-browser.test.js tests/stage5.test.js",
+    "test": "node --test --test-concurrency=1 tests/database-config.test.js tests/static-assets.test.js tests/riku.test.js tests/stage3.test.js tests/stage4-browser.test.js tests/stage5.test.js",
     "start": "node --env-file-if-exists=.env scripts/server.js",
     "db:setup": "node scripts/database.js setup",
     "db:api-setup": "node scripts/database.js api-setup",

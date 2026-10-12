@@ -13,10 +13,10 @@
       <div>
         <p class="eyebrow">どんどん捕まえよう！</p>
         <h1><img class="title-cat" src="images/leche.png" alt=""><span>レチェとラテ</span><img class="title-cat" src="images/latte.png" alt=""></h1>
-        <p class="intro" data-game-only hidden>30秒でネズミを何匹つかまえられるかな？ 5秒ごとにネズミが1匹増えるよ！</p>
+        <p class="intro" data-game-only hidden>30秒で何ポイントとれるかな？ 通常のネズミは1P、3秒ごとに1匹増えるよ！ 残り10秒で、3倍速の特殊ネズミが登場！ 捕まえると5P！</p>
       </div>
       <div class="status" aria-label="ゲームの記録" data-game-only hidden>
-        <div class="status-item"><span>スコア</span><strong id="score">0</strong></div>
+        <div class="status-item"><span>スコア</span><strong><span id="score">0</span><small>P</small></strong></div>
         <div class="status-item"><span>残り時間</span><strong><span id="time">30</span><small>秒</small></strong></div>
       </div>
     </header>
@@ -25,9 +25,10 @@
     <fieldset id="cat-selection" class="cat-selection" hidden>
       <legend>どちらの猫で遊ぶ？</legend>
       <div class="cat-options">
-        <label class="cat-option"><input type="radio" name="play-cat" value="leche" checked><span><img src="images/leche.png" alt=""><strong>レチェ</strong><small>🐟 鰹節が5秒ごとに出現！<br>取ると5秒間スピードが2倍になるよ！</small></span></label>
-        <label class="cat-option"><input type="radio" name="play-cat" value="latte"><span><img src="images/latte.png" alt=""><strong>ラテ</strong><small>🍓 苺が5秒ごとに出現！<br>取ると5秒間スピードが2倍になるよ！</small></span></label>
+        <label class="cat-option"><input type="radio" name="play-cat" value="leche" checked><span><img src="images/leche.png" alt=""><strong>レチェ</strong><small>移動スピード：標準（1倍）<br>🐟 鰹節が5秒ごとに出現！<br>取ると7秒間スピードが2倍になるよ！<br>リクに触れると1秒間スピード2倍！</small></span></label>
+        <label class="cat-option"><input type="radio" name="play-cat" value="latte"><span><img src="images/latte.png" alt=""><strong>ラテ</strong><small>移動スピード：レチェの1.2倍！<br>🍓 苺が5秒ごとに出現！<br>取ると5秒間スピードが2倍になるよ！<br>リクに触れると1秒間動けない！</small></span></label>
       </div>
+      <p class="ranking-description">開始15秒後にリクが登場して、ランダムに動き回るよ！</p>
     </fieldset>
 
     <section class="field-wrap" aria-label="ゲーム画面">
@@ -55,7 +56,7 @@
           <div class="result-card">
             <div class="result-emoji" aria-hidden="true"><img id="result-cat" class="result-cat" src="images/leche.png" alt="">✨</div>
             <h2>おつかれさま！</h2>
-            <p>ネズミを <strong id="final-score">0</strong> 匹つかまえたよ</p>
+            <p>スコアは <strong id="final-score">0</strong> Pだよ！</p>
             <p id="result-save-message" class="save-message" aria-live="polite"></p>
             <button id="restart" type="button">START <small>もう一度遊ぶ</small></button>
           </div>

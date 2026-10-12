@@ -32,6 +32,8 @@ const files = new Map([
   ["/images/latte.png", { name: "images/latte.png", type: "image/png" }],
   ["/images/leche.png", { name: "images/leche.png", type: "image/png" }],
   ["/images/mouse.png", { name: "images/mouse.png", type: "image/png" }],
+  ["/images/mouse-busaiku.png", { name: "images/mouse-busaiku.png", type: "image/png" }],
+  ["/images/riku.png", { name: "images/riku.png", type: "image/png" }],
   ["/images/alley.png", { name: "images/alley.png", type: "image/png" }]
 ]);
 

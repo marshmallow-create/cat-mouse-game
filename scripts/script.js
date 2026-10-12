@@ -22,8 +22,8 @@ const catChoices = [...document.querySelectorAll('input[name="play-cat"]')];
 const startCatElement = document.getElementById("start-cat");
 const resultCatElement = document.getElementById("result-cat");
 const catTypes = {
-  latte: { name: "ラテ", image: "images/latte.png", item: "苺", emoji: "🍓" },
-  leche: { name: "レチェ", image: "images/leche.png", item: "鰹節", emoji: "🐟" }
+  latte: { name: "ラテ", image: "images/latte.png", item: "苺", emoji: "🍓", speedMultiplier: 1.2, boostDuration: 5000 },
+  leche: { name: "レチェ", image: "images/leche.png", item: "鰹節", emoji: "🐟", speedMultiplier: 1, boostDuration: 7000 }
 };
 let selectedCat = "leche";
 let playCat = catTypes[selectedCat];
@@ -45,17 +45,22 @@ for (const choice of catChoices) {
 
 const GAME_LENGTH = 30; // 秒
 const COUNTDOWN_LENGTH = 3000; // ミリ秒
-const MOUSE_SPAWN_INTERVAL = 5000; // ミリ秒
+const MOUSE_SPAWN_INTERVAL = 3000; // ミリ秒
 const STRAWBERRY_SPAWN_INTERVAL = 5000;
-const BOOST_DURATION = 5000;
 const STRAWBERRY_RADIUS = 22;
 const CAT_SPEED = 270; // 1秒に進むピクセル数
 const MOUSE_SPEED = 115;
+const SPECIAL_MOUSE_REMAINING = 10; // 残り秒数
 const CHARACTER_RADIUS = 27;
 const CAT_RADIUS = 36;
 const PICKUP_DISTANCE = CAT_RADIUS + STRAWBERRY_RADIUS;
 const CATCH_DISTANCE = 48;
 const DIRECTION_INTERVAL = 850; // ミリ秒
+const RIKU_SPAWN_TIME = 15000;
+const RIKU_SPEED = 150;
+const RIKU_RADIUS = 36;
+const RIKU_CONTACT_DISTANCE = CAT_RADIUS + RIKU_RADIUS;
+const RIKU_EFFECT_DURATION = 1000;
 
 const keys = new Set();
 const directionHeld = key => keys.has(key);
@@ -68,10 +73,13 @@ let characterScale = 1;
 let mobilePlay = false;
 let orientationPausedAt = null;
 const cat = { x: 0, y: 0 };
-const mice = [{ element: mouseElement, x: 0, y: 0, dx: 0, dy: 0 }];
+const mice = [{ element: mouseElement, x: 0, y: 0, dx: 0, dy: 0, special: false, speedMultiplier: 1, points: 1 }];
 const strawberries = [];
 let spawnedStrawberryCount = 0;
 let boostUntil = 0;
+let riku = null;
+let rikuBoostUntil = 0;
+let stunUntil = 0;
 let score = 0;
 let startTime = 0;
 let previousTime = 0;
@@ -125,6 +133,9 @@ function updateOrientationState() {
     startTime += duration;
     lastDirectionTime += duration;
     if (boostUntil) boostUntil += duration;
+    if (rikuBoostUntil) rikuBoostUntil += duration;
+    if (stunUntil) stunUntil += duration;
+    if (riku) riku.lastDirectionTime += duration;
     previousTime = now;
     orientationPausedAt = null;
   }
@@ -258,7 +269,7 @@ async function loadRankings() {
     data.results.forEach((result, index) => {
       const row = document.createElement("tr");
       if (result.id === lastSavedResultId) row.className = "current-result";
-      const values = [`${index + 1}位`, result.username, `${result.score}匹`, catTypes[result.cat_type]?.name || "不明", formatter.format(new Date(result.played_at))];
+      const values = [`${index + 1}位`, result.username, `${result.score}P`, catTypes[result.cat_type]?.name || "不明", formatter.format(new Date(result.played_at))];
       for (const value of values) {
         const cell = document.createElement("td");
         cell.textContent = value;
@@ -267,7 +278,7 @@ async function loadRankings() {
       rankingBodyElement.appendChild(row);
     });
     personalBestElement.textContent = data.personalBest
-      ? `自己ベスト：${data.personalBest.score}匹（使用した猫：${catTypes[data.personalBest.cat_type]?.name || "不明"}）`
+      ? `自己ベスト：${data.personalBest.score}P（使用した猫：${catTypes[data.personalBest.cat_type]?.name || "不明"}）`
       : "自己ベスト：まだ記録がありません。";
     rankingMessageElement.textContent = data.results.length ? "" : "まだ記録がありません。最初の1回を遊んでみよう！";
   } catch (error) {
@@ -345,6 +356,10 @@ function bounds(radius = CHARACTER_RADIUS) {
 function draw() {
   catElement.style.left = `${cat.x}px`;
   catElement.style.top = `${cat.y}px`;
+  if (riku) {
+    riku.element.style.left = `${riku.x}px`;
+    riku.element.style.top = `${riku.y}px`;
+  }
   for (const mouse of mice) {
     mouse.element.style.left = `${mouse.x}px`;
     mouse.element.style.top = `${mouse.y}px`;
@@ -360,7 +375,7 @@ function addStrawberry() {
   element.className = "character strawberry";
   element.textContent = playCat.emoji;
   element.setAttribute("role", "img");
-  element.setAttribute("aria-label", `${playCat.item}：5秒間スピード2倍`);
+  element.setAttribute("aria-label", `${playCat.item}：${playCat.boostDuration / 1000}秒間スピード2倍`);
   const area = bounds(STRAWBERRY_RADIUS);
   const strawberry = { element, x: 0, y: 0 };
   // 猫の真下に出現して即座に取得されるのを避ける。
@@ -374,12 +389,57 @@ function addStrawberry() {
 }
 
 function updateBoostStatus(now) {
-  const active = now < boostUntil;
+  const effectUntil = Math.max(boostUntil, rikuBoostUntil);
+  const active = now < effectUntil;
+  const stunned = now < stunUntil;
   catElement.classList.toggle("boosted", active);
-  boostStatusElement.hidden = !active;
-  boostStatusElement.textContent = active
-    ? `${playCat.emoji} スピード2倍！ あと${Math.ceil((boostUntil - now) / 1000)}秒`
-    : "";
+  catElement.classList.toggle("stunned", stunned);
+  boostStatusElement.hidden = !active && !stunned;
+  boostStatusElement.textContent = stunned
+    ? "リクに触れた！ 1秒間動けない！"
+    : active
+      ? `${rikuBoostUntil > boostUntil ? "リク：" : playCat.emoji} スピード2倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
+      : "";
+}
+
+function resetRiku() {
+  if (riku) riku.element.remove();
+  riku = null;
+  rikuBoostUntil = 0;
+  stunUntil = 0;
+  updateBoostStatus(0);
+}
+
+function updateRiku(now, seconds) {
+  if (!riku && now - startTime >= RIKU_SPAWN_TIME) {
+    const element = document.createElement("img");
+    element.className = "character riku";
+    element.src = "images/riku.png";
+    element.alt = "リク";
+    element.draggable = false;
+    riku = { element, x: 0, y: 0, dx: 0, dy: 0, touching: false, lastDirectionTime: now };
+    placeMouse(riku, RIKU_RADIUS);
+    field.appendChild(element);
+  }
+  if (!riku) return;
+  if (now - riku.lastDirectionTime >= DIRECTION_INTERVAL) {
+    chooseMouseDirection(riku);
+    riku.lastDirectionTime = now;
+  }
+  const area = bounds(RIKU_RADIUS);
+  riku.x += riku.dx * RIKU_SPEED * characterScale * seconds;
+  riku.y += riku.dy * RIKU_SPEED * characterScale * seconds;
+  if (riku.x < area.minX || riku.x > area.maxX) riku.dx *= -1;
+  if (riku.y < area.minY || riku.y > area.maxY) riku.dy *= -1;
+  riku.x = clamp(riku.x, area.minX, area.maxX);
+  riku.y = clamp(riku.y, area.minY, area.maxY);
+  const touching = Math.hypot(cat.x - riku.x, cat.y - riku.y) < RIKU_CONTACT_DISTANCE * characterScale;
+  // 重なっている間は効果を延長せず、離れてから再接触したときに発動する。
+  if (touching && !riku.touching) {
+    if (playCat === catTypes.leche) rikuBoostUntil = now + RIKU_EFFECT_DURATION;
+    else stunUntil = now + RIKU_EFFECT_DURATION;
+  }
+  riku.touching = touching;
 }
 
 function resetStrawberries() {
@@ -395,8 +455,8 @@ function chooseMouseDirection(mouse) {
   mouse.dy = Math.sin(angle);
 }
 
-function placeMouse(mouse) {
-  const area = bounds();
+function placeMouse(mouse, radius = CHARACTER_RADIUS) {
+  const area = bounds(radius);
 
   // できるだけ猫から離れた位置に出して、すぐ捕まるのを防ぐ。
   for (let attempt = 0; attempt < 30; attempt++) {
@@ -407,15 +467,16 @@ function placeMouse(mouse) {
   chooseMouseDirection(mouse);
 }
 
-function addMouse() {
+function addMouse(special = false) {
   const element = document.createElement("img");
-  element.className = "character mouse";
-  element.src = "images/mouse.png";
-  element.alt = "ネズミ";
+  element.className = special ? "character mouse special-mouse" : "character mouse";
+  element.src = special ? "images/mouse-busaiku.png" : "images/mouse.png";
+  element.alt = special ? "特殊ネズミ：5P" : "ネズミ：1P";
   element.draggable = false;
   field.appendChild(element);
 
-  const mouse = { element, x: 0, y: 0, dx: 0, dy: 0 };
+  const mouse = { element, x: 0, y: 0, dx: 0, dy: 0, special,
+    speedMultiplier: special ? 3 : 1, points: special ? 5 : 1 };
   mice.push(mouse);
   placeMouse(mouse);
 }
@@ -452,6 +513,7 @@ async function beginCountdown() {
   playUserId = currentUser.id;
   currentPlayId = crypto.randomUUID();
   resultSaveMessageElement.textContent = "";
+  resetRiku();
   resetStrawberries();
   placeCharacters();
   score = 0;
@@ -485,6 +547,7 @@ function startGame(now) {
 function endGame() {
   if (!playing) return;
   playing = false;
+  resetRiku();
   resetStrawberries();
   clearMovement();
   timeElement.textContent = "0";
@@ -525,6 +588,7 @@ function update(now) {
     } else {
       // フレーム間の秒数を使うと、PCの描画速度が違っても同じ速さで動く。
       const seconds = Math.min((now - previousTime) / 1000, 0.05);
+      updateRiku(now, seconds);
       const area = bounds();
       const catArea = bounds(CAT_RADIUS);
       const horizontal = touch.pointerId !== null ? touch.dx : Number(directionHeld("arrowright") || keys.has("d"))
@@ -532,7 +596,8 @@ function update(now) {
       const vertical = touch.pointerId !== null ? touch.dy : Number(directionHeld("arrowdown") || keys.has("s"))
         - Number(directionHeld("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
-      const catSpeed = CAT_SPEED * characterScale * (now < boostUntil ? 2 : 1);
+      const catSpeed = now < stunUntil ? 0
+        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < Math.max(boostUntil, rikuBoostUntil) ? 2 : 1);
 
       cat.x = clamp(cat.x + horizontal / length * catSpeed * seconds, catArea.minX, catArea.maxX);
       cat.y = clamp(cat.y + vertical / length * catSpeed * seconds, catArea.minY, catArea.maxY);
@@ -547,23 +612,28 @@ function update(now) {
         if (Math.hypot(cat.x - strawberry.x, cat.y - strawberry.y) < PICKUP_DISTANCE * characterScale) {
           strawberry.element.remove();
           strawberries.splice(index, 1);
-          // 効果は重ねず、最後に取得してから5秒間に更新する。
-          boostUntil = now + BOOST_DURATION;
+          // 効果は重ねず、最後に取得してから猫ごとの効果時間に更新する。
+          boostUntil = now + playCat.boostDuration;
         }
       }
       updateBoostStatus(now);
 
-      // 開始から5秒ごとにネズミを1匹追加する。
+      // 開始から3秒ごとにネズミを1匹追加する。
       const targetMouseCount = 1 + Math.floor((now - startTime) / MOUSE_SPAWN_INTERVAL);
-      while (mice.length < targetMouseCount) addMouse();
+      let normalMouseCount = mice.filter(mouse => !mouse.special).length;
+      while (normalMouseCount < targetMouseCount) {
+        addMouse();
+        normalMouseCount++;
+      }
+      if (remaining <= SPECIAL_MOUSE_REMAINING && !mice.some(mouse => mouse.special)) addMouse(true);
 
       if (now - lastDirectionTime >= DIRECTION_INTERVAL) {
         for (const mouse of mice) chooseMouseDirection(mouse);
         lastDirectionTime = now;
       }
       for (const mouse of mice) {
-        mouse.x += mouse.dx * MOUSE_SPEED * characterScale * seconds;
-        mouse.y += mouse.dy * MOUSE_SPEED * characterScale * seconds;
+        mouse.x += mouse.dx * MOUSE_SPEED * mouse.speedMultiplier * characterScale * seconds;
+        mouse.y += mouse.dy * MOUSE_SPEED * mouse.speedMultiplier * characterScale * seconds;
 
         // 壁に当たったネズミは向きを変える。
         if (mouse.x < area.minX || mouse.x > area.maxX) mouse.dx *= -1;
@@ -572,7 +642,7 @@ function update(now) {
         mouse.y = clamp(mouse.y, area.minY, area.maxY);
 
         if (Math.hypot(cat.x - mouse.x, cat.y - mouse.y) < CATCH_DISTANCE * characterScale) {
-          score++;
+          score += mouse.points;
           scoreElement.textContent = String(score);
           placeMouse(mouse);
         }
@@ -642,6 +712,11 @@ function resizeCharacters() {
   const catArea = bounds(CAT_RADIUS);
   cat.x = clamp(cat.x, catArea.minX, catArea.maxX);
   cat.y = clamp(cat.y, catArea.minY, catArea.maxY);
+  if (riku) {
+    const rikuArea = bounds(RIKU_RADIUS);
+    riku.x = clamp(riku.x, rikuArea.minX, rikuArea.maxX);
+    riku.y = clamp(riku.y, rikuArea.minY, rikuArea.maxY);
+  }
   for (const mouse of mice) {
     mouse.x = clamp(mouse.x, area.minX, area.maxX);
     mouse.y = clamp(mouse.y, area.minY, area.maxY);
