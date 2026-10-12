@@ -102,9 +102,9 @@ h1 { display: flex; align-items: center; gap: 8px; margin: 0; color: #6550b5; fo
   pointer-events: none;
   filter: drop-shadow(0 0 4px #ffffffd9) drop-shadow(0 5px 4px #24411db3);
 }
-.cat { z-index: 2; width: 72px; height: 72px; object-fit: contain; }
-.mouse { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; }
-.strawberry { width: 44px; height: 44px; font-size: 36px; }
+.cat { z-index: 2; width: calc(72px * var(--character-scale, 1)); height: calc(72px * var(--character-scale, 1)); object-fit: contain; }
+.mouse { width: calc(64px * var(--character-scale, 1)); height: calc(48px * var(--character-scale, 1)); object-fit: cover; border-radius: calc(10px * var(--character-scale, 1)); }
+.strawberry { width: calc(44px * var(--character-scale, 1)); height: calc(44px * var(--character-scale, 1)); font-size: calc(36px * var(--character-scale, 1)); }
 .cat.boosted { filter: drop-shadow(0 0 8px #ffe46b) drop-shadow(0 0 16px #ffb52e); }
 .boost-status {
   position: absolute;
@@ -183,11 +183,11 @@ button:disabled { opacity: .65; cursor: wait; }
 .secondary-button:hover { background: #f0e8ff; }
 .secondary-button:active:not(:disabled) { box-shadow: none; }
 .ranking-table-wrap { overflow-x: auto; }
-.ranking-table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 14px; text-align: left; }
+.ranking-table { width: 100%; min-width: 500px; border-collapse: collapse; font-size: 14px; text-align: left; }
 .ranking-table th, .ranking-table td { padding: 12px 8px; border-bottom: 1px solid #bddce8; }
 .ranking-table th { color: #48426a; font-size: 12px; }
 .ranking-table td:nth-child(2) { overflow-wrap: anywhere; }
-.ranking-table th, .ranking-table td:first-child, .ranking-table td:nth-child(3), .ranking-table td:last-child { white-space: nowrap; }
+.ranking-table th, .ranking-table td:first-child, .ranking-table td:nth-child(3), .ranking-table td:nth-child(4), .ranking-table td:last-child { white-space: nowrap; }
 .ranking-table .current-result { background: #fff0b5; font-weight: 700; }
 
 .instructions { margin: 19px 0 0; text-align: center; font-size: 14px; font-weight: 700; }

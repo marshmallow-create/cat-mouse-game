@@ -68,10 +68,11 @@ test("production proxy requests, Secure sessions, private logs and backup restor
     session = await registered.json(); cookie = registered.headers.get("set-cookie").split(";")[0];
     assert.equal((await (await request("/api/auth/me")).json()).user.id, session.user.id);
     const playId = crypto.randomUUID();
-    assert.equal((await post("/api/results", { playId, score: 11 })).status, 201);
-    assert.equal((await post("/api/results", { playId, score: 11 })).status, 200);
+    assert.equal((await post("/api/results", { playId, score: 11, catType: "latte" })).status, 201);
+    assert.equal((await post("/api/results", { playId, score: 11, catType: "latte" })).status, 200);
     const ranking = await (await request("/api/rankings")).json();
     assert.equal(ranking.personalBest.score, 11);
+    assert.equal(ranking.personalBest.cat_type, "latte");
     assert.ok(ranking.results.some(result => result.username === username && result.score === 11));
     const health = await request("/healthz");
     assert.equal(health.status, 200); assert.equal(await health.text(), "ok");
@@ -89,7 +90,7 @@ test("production proxy requests, Secure sessions, private logs and backup restor
     await assert.rejects(writeBackup(data, filename), error => error.code === "EEXIST");
     await admin.query(`CREATE DATABASE "${database}"`); created = true;
     restored = new Pool({ ...adminConfig, database });
-    for (const file of ["schema.sql", "stage3.sql", "stage4.sql"]) await restored.query(fs.readFileSync(path.join(root, "database", file), "utf8"));
+    for (const file of ["schema.sql", "stage3.sql", "stage4.sql", "cat-info.sql"]) await restored.query(fs.readFileSync(path.join(root, "database", file), "utf8"));
     const client = await restored.connect();
     try {
       await restoreIntoEmptyDatabase(client, data);

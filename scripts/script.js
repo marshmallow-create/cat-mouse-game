@@ -64,6 +64,7 @@ const touchOrigin = document.getElementById("touch-origin");
 const touchStick = document.getElementById("touch-stick");
 const rotateGuide = document.getElementById("rotate-guide");
 const mobileControls = matchMedia("(pointer: coarse), (max-width: 680px)");
+let characterScale = 1;
 let mobilePlay = false;
 let orientationPausedAt = null;
 const cat = { x: 0, y: 0 };
@@ -209,7 +210,8 @@ function restorePendingResults(userId) {
     return records.filter(record => record && typeof record.playId === "string"
       && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(record.playId)
       && Number.isInteger(record.score) && record.score >= 0 && record.score <= 2147483647)
-      .map(record => ({ playId: record.playId, score: record.score }));
+      .filter(record => record.catType == null || ["leche", "latte"].includes(record.catType))
+      .map(record => ({ playId: record.playId, score: record.score, catType: record.catType ?? null }));
   } catch {
     queueCanPersist = false;
     return [];
@@ -256,7 +258,7 @@ async function loadRankings() {
     data.results.forEach((result, index) => {
       const row = document.createElement("tr");
       if (result.id === lastSavedResultId) row.className = "current-result";
-      const values = [`${index + 1}位`, result.username, `${result.score}匹`, formatter.format(new Date(result.played_at))];
+      const values = [`${index + 1}位`, result.username, `${result.score}匹`, catTypes[result.cat_type]?.name || "不明", formatter.format(new Date(result.played_at))];
       for (const value of values) {
         const cell = document.createElement("td");
         cell.textContent = value;
@@ -265,7 +267,7 @@ async function loadRankings() {
       rankingBodyElement.appendChild(row);
     });
     personalBestElement.textContent = data.personalBest
-      ? `自己ベスト：${data.personalBest.score}匹`
+      ? `自己ベスト：${data.personalBest.score}匹（使用した猫：${catTypes[data.personalBest.cat_type]?.name || "不明"}）`
       : "自己ベスト：まだ記録がありません。";
     rankingMessageElement.textContent = data.results.length ? "" : "まだ記録がありません。最初の1回を遊んでみよう！";
   } catch (error) {
@@ -322,7 +324,16 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+// PCの標準フィールド（約900×510px）を基準に、スマホの表示と距離をそろえる。
+function updateCharacterScale() {
+  characterScale = mobileControls.matches && field.clientWidth > 0 && field.clientHeight > 0
+    ? Math.min(1, field.clientWidth / 900, field.clientHeight / 510)
+    : 1;
+  field.style.setProperty("--character-scale", characterScale);
+}
+
 function bounds(radius = CHARACTER_RADIUS) {
+  radius *= characterScale;
   return {
     minX: radius,
     maxX: Math.max(radius, field.clientWidth - radius),
@@ -356,7 +367,7 @@ function addStrawberry() {
   for (let attempt = 0; attempt < 30; attempt++) {
     strawberry.x = area.minX + Math.random() * (area.maxX - area.minX);
     strawberry.y = area.minY + Math.random() * (area.maxY - area.minY);
-    if (Math.hypot(strawberry.x - cat.x, strawberry.y - cat.y) > PICKUP_DISTANCE + 20) break;
+    if (Math.hypot(strawberry.x - cat.x, strawberry.y - cat.y) > (PICKUP_DISTANCE + 20) * characterScale) break;
   }
   strawberries.push(strawberry);
   field.appendChild(element);
@@ -391,7 +402,7 @@ function placeMouse(mouse) {
   for (let attempt = 0; attempt < 30; attempt++) {
     mouse.x = area.minX + Math.random() * (area.maxX - area.minX);
     mouse.y = area.minY + Math.random() * (area.maxY - area.minY);
-    if (Math.hypot(mouse.x - cat.x, mouse.y - cat.y) > 130) break;
+    if (Math.hypot(mouse.x - cat.x, mouse.y - cat.y) > 130 * characterScale) break;
   }
   chooseMouseDirection(mouse);
 }
@@ -416,6 +427,7 @@ function resetMice() {
 }
 
 function placeCharacters() {
+  updateCharacterScale();
   const area = bounds(CAT_RADIUS);
   cat.x = area.minX + (area.maxX - area.minX) * 0.23;
   cat.y = area.minY + (area.maxY - area.minY) * 0.5;
@@ -483,7 +495,7 @@ function endGame() {
   restartButton.focus();
   // スコアをコピーしてから送信し、再挑戦のリセットに影響されないようにします。
   if (!currentUser || currentUser.id !== playUserId) return;
-  pendingResults.push({ playId: currentPlayId, score });
+  pendingResults.push({ playId: currentPlayId, score, catType: Object.keys(catTypes).find(key => catTypes[key] === playCat) });
   persistPendingResults(playUserId);
   resultSaveMessageElement.textContent = "記録を保存しています…";
   savePendingResults();
@@ -520,7 +532,7 @@ function update(now) {
       const vertical = touch.pointerId !== null ? touch.dy : Number(directionHeld("arrowdown") || keys.has("s"))
         - Number(directionHeld("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
-      const catSpeed = CAT_SPEED * (now < boostUntil ? 2 : 1);
+      const catSpeed = CAT_SPEED * characterScale * (now < boostUntil ? 2 : 1);
 
       cat.x = clamp(cat.x + horizontal / length * catSpeed * seconds, catArea.minX, catArea.maxX);
       cat.y = clamp(cat.y + vertical / length * catSpeed * seconds, catArea.minY, catArea.maxY);
@@ -532,7 +544,7 @@ function update(now) {
       }
       for (let index = strawberries.length - 1; index >= 0; index--) {
         const strawberry = strawberries[index];
-        if (Math.hypot(cat.x - strawberry.x, cat.y - strawberry.y) < PICKUP_DISTANCE) {
+        if (Math.hypot(cat.x - strawberry.x, cat.y - strawberry.y) < PICKUP_DISTANCE * characterScale) {
           strawberry.element.remove();
           strawberries.splice(index, 1);
           // 効果は重ねず、最後に取得してから5秒間に更新する。
@@ -550,8 +562,8 @@ function update(now) {
         lastDirectionTime = now;
       }
       for (const mouse of mice) {
-        mouse.x += mouse.dx * MOUSE_SPEED * seconds;
-        mouse.y += mouse.dy * MOUSE_SPEED * seconds;
+        mouse.x += mouse.dx * MOUSE_SPEED * characterScale * seconds;
+        mouse.y += mouse.dy * MOUSE_SPEED * characterScale * seconds;
 
         // 壁に当たったネズミは向きを変える。
         if (mouse.x < area.minX || mouse.x > area.maxX) mouse.dx *= -1;
@@ -559,7 +571,7 @@ function update(now) {
         mouse.x = clamp(mouse.x, area.minX, area.maxX);
         mouse.y = clamp(mouse.y, area.minY, area.maxY);
 
-        if (Math.hypot(cat.x - mouse.x, cat.y - mouse.y) < CATCH_DISTANCE) {
+        if (Math.hypot(cat.x - mouse.x, cat.y - mouse.y) < CATCH_DISTANCE * characterScale) {
           score++;
           scoreElement.textContent = String(score);
           placeMouse(mouse);
@@ -625,6 +637,7 @@ for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
 }
 
 function resizeCharacters() {
+  updateCharacterScale();
   const area = bounds();
   const catArea = bounds(CAT_RADIUS);
   cat.x = clamp(cat.x, catArea.minX, catArea.maxX);

@@ -19,8 +19,10 @@ async function main() {
     const token = crypto.randomBytes(32).toString("hex");
     await client.query("INSERT INTO game_sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '1 hour')", [token, user.id]);
     const playId = crypto.randomUUID();
-    const saved = (await client.query("INSERT INTO game_results(play_id,score,user_id) VALUES($1,3,$2) RETURNING score", [playId, user.id])).rows[0];
+    const saved = (await client.query("INSERT INTO game_results(play_id,score,user_id,cat_type) VALUES($1,3,$2,'leche') RETURNING score, cat_type", [playId, user.id])).rows[0];
     assert.equal(saved.score, 3);
+    assert.equal(saved.cat_type, "leche");
+    assert.equal((await client.query("SELECT cat_type FROM game_results WHERE play_id=$1", [playId])).rows[0].cat_type, "leche");
     assert.equal((await client.query("SELECT count(*) FROM game_results WHERE user_id=$1", [user.id])).rows[0].count, "1");
     await client.query("DELETE FROM game_sessions WHERE token_hash=$1", [token]);
     await client.query("ROLLBACK");

@@ -154,7 +154,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await poll(() => evaluate("strawberries.length > 0"));
     assert.equal(await evaluate("strawberries[0].element.textContent"), "🍓");
     await evaluate("score = 7; startTime = performance.now() - 30001");
-    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7匹'"));
+    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7匹（使用した猫：ラテ）'"));
+    assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'ラテ')"));
     assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/latte.png");
     assert.equal((await admin.query("SELECT score FROM game_results WHERE user_id = $1", [bobId])).rows[0].score, 7);
@@ -164,7 +165,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // テキスト入力上のゲームキーはpreventDefaultしない。
     assert.equal(await evaluate("const input = document.getElementById('username'); const event = new KeyboardEvent('keydown', {key:'a', bubbles:true, cancelable:true}); input.dispatchEvent(event); event.defaultPrevented"), false);
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}匹'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}匹（使用した猫：レチェ）'`));
+    assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'レチェ')"));
     assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[0])}) && rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     const aliceRows = (await admin.query("SELECT score FROM game_results WHERE user_id = $1", [aliceId])).rows;
     assert.deepEqual(aliceRows.map(row => row.score), [aliceScore]);
@@ -186,7 +188,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("logoutButton.click()");
     await poll(() => evaluate("currentUser === null && !authBusy"));
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}匹'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}匹（使用した猫：${aliceScore > 9 ? "レチェ" : "ラテ"}）'`));
     assert.equal((await admin.query("SELECT count(*) FROM game_results WHERE user_id = $1", [aliceId])).rows[0].count, "2");
     assert.deepEqual(errors, []);
     // 縦向きでは開始を待ち、横向きで実際のタッチ入力を確認。

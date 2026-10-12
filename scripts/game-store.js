@@ -15,26 +15,26 @@ function getPool() {
   return pool;
 }
 
-async function saveResult(playId, score, userId) {
+async function saveResult(playId, score, userId, catType = null) {
   const database = getPool();
   // $1、$2に値を別渡しすることで、入力をSQLの命令として扱いません。
   const inserted = await database.query(`
-    INSERT INTO game_results (play_id, score, user_id) VALUES ($1, $2, $3)
+    INSERT INTO game_results (play_id, score, user_id, cat_type) VALUES ($1, $2, $3, $4)
     ON CONFLICT (play_id) DO NOTHING
-    RETURNING id, score, played_at
-  `, [playId, score, userId]);
+    RETURNING id, score, played_at, cat_type
+  `, [playId, score, userId, catType]);
   if (inserted.rows.length) return { result: inserted.rows[0], alreadySaved: false };
 
   // 同じ番号を再送した場合は元の記録を返します。日時も変更しません。
   const existing = await database.query(
-    "SELECT id, score, played_at FROM game_results WHERE play_id = $1 AND user_id = $2", [playId, userId]);
+    "SELECT id, score, played_at, cat_type FROM game_results WHERE play_id = $1 AND user_id = $2", [playId, userId]);
   if (!existing.rows.length) {
     const error = new Error("このプレイ番号は使用できません。");
     error.status = 409;
     throw error;
   }
-  if (existing.rows[0].score !== score) {
-    const error = new Error("同じプレイ番号で異なるスコアは保存できません。");
+  if (existing.rows[0].score !== score || existing.rows[0].cat_type !== catType) {
+    const error = new Error("同じプレイ番号で異なるスコアや猫は保存できません。");
     error.status = 409;
     throw error;
   }
@@ -43,7 +43,7 @@ async function saveResult(playId, score, userId) {
 
 async function getRanking() {
   const result = await getPool().query(`
-    SELECT r.id, r.score, r.played_at, u.username
+    SELECT r.id, r.score, r.played_at, r.cat_type, u.username
     FROM game_results r JOIN game_users u ON u.id = r.user_id
     ORDER BY r.score DESC, r.played_at DESC, r.id DESC LIMIT 10
   `);
@@ -52,7 +52,7 @@ async function getRanking() {
 
 async function getPersonalBest(userId) {
   const result = await getPool().query(`
-    SELECT id, score, played_at FROM game_results WHERE user_id = $1
+    SELECT id, score, played_at, cat_type FROM game_results WHERE user_id = $1
     ORDER BY score DESC, played_at DESC, id DESC LIMIT 1
   `, [userId]);
   return result.rows[0] || null;

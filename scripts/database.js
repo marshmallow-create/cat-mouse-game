@@ -160,6 +160,7 @@ async function main() {
       console.log("API database setup complete. Connection credentials stay in .local/.");
       if (action === "auth-setup") {
         runTool("psql", [...psqlArgs(), "-f", path.join(projectDir, "database", "stage4.sql")]);
+        runTool("psql", [...psqlArgs(), "-f", path.join(projectDir, "database", "cat-info.sql")]);
         console.log("Stage 4 authentication database setup complete. Existing results are preserved.");
       }
     } else {

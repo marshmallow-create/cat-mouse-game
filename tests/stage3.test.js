@@ -150,11 +150,26 @@ test("stages 3 and 4: authentication, ownership, API, failure and persistence", 
     const zero = await post({ playId: makeId(), score: 0 });
     assert.equal(zero.status, 201);
 
+    // 猫の保存・読み出し、同じプレイでの猫の変更拒否、旧形式との互換性。
+    assert.equal((await zero.json()).result.cat_type, null);
+    for (const catType of ["leche", "latte"]) {
+      const catPlayId = makeId();
+      const catRecord = { playId: catPlayId, score: 5, catType };
+      const savedCat = await post(catRecord);
+      assert.equal(savedCat.status, 201);
+      assert.equal((await savedCat.json()).result.cat_type, catType);
+      assert.equal((await post(catRecord)).status, 200);
+      assert.equal((await post({ ...catRecord, catType: catType === "leche" ? "latte" : "leche" })).status, 409);
+      const records = await (await request("/api/rankings")).json();
+      assert.ok(records.results.some(result => result.cat_type === catType));
+    }
+
     // データ形式・方法・送信元をサーバーで確認する。
     for (const body of [null, [], {}, { playId, score: -1 }, { playId, score: 1.5 },
       { playId, score: "12" }, { playId, score: 2147483648 }, { playId: "invalid", score: 12 },
       { playId: { toString: "invalid" }, score: 12 },
-      { playId, score: 12, played_at: "yesterday" }]) {
+      { playId, score: 12, played_at: "yesterday" },
+      ...["riku", "", 1, {}, []].map(catType => ({ playId, score: 12, catType }))]) {
       assert.equal((await post(body)).status, 400);
     }
     assert.equal((await post({}, { body: "{" })).status, 400);
@@ -178,7 +193,7 @@ test("stages 3 and 4: authentication, ownership, API, failure and persistence", 
     await admin.query("UPDATE game_results SET score = 2000000100, played_at = $1 WHERE play_id = $2", ["2026-10-09T02:00:00Z", rankingIds[1]]);
     const rankingData = await (await request("/api/rankings")).json();
     const rankings = rankingData.results;
-    const expected = (await admin.query("SELECT r.id, r.score, r.played_at, u.username FROM game_results r JOIN game_users u ON u.id = r.user_id ORDER BY r.score DESC, r.played_at DESC, r.id DESC LIMIT 10")).rows;
+    const expected = (await admin.query("SELECT r.id, r.score, r.played_at, r.cat_type, u.username FROM game_results r JOIN game_users u ON u.id = r.user_id ORDER BY r.score DESC, r.played_at DESC, r.id DESC LIMIT 10")).rows;
     assert.equal(rankings.length, 10);
     assert.deepEqual(rankings, JSON.parse(JSON.stringify(expected)));
     assert.equal(rankingData.personalBest.score, 2000000100);
@@ -189,7 +204,7 @@ test("stages 3 and 4: authentication, ownership, API, failure and persistence", 
     assert.equal(bobOutsideTopTen.personalBest.score, 17);
     assert.ok(bobOutsideTopTen.results.every(result => result.username === username));
     await account(username, false);
-    assert.equal(Number((await admin.query("SELECT count(*) FROM game_results")).rows[0].count), initialCount + 15);
+    assert.equal(Number((await admin.query("SELECT count(*) FROM game_results")).rows[0].count), initialCount + 17);
 
     // アプリ用アカウントは読み出し・追加だけ。管理操作は許可されない。
     const rights = (await app.query("SELECT current_user, has_table_privilege(current_user, 'game_results', 'SELECT') AS can_read, has_table_privilege(current_user, 'game_results', 'INSERT') AS can_insert")).rows[0];

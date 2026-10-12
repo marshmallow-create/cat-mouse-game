@@ -22,7 +22,7 @@ async function main() {
     // 名前は上の正規表現で限定し、既存DBにはCREATE DATABASEが失敗します。
     await admin.query(`CREATE DATABASE "${database}"`);
     restored = new Pool({ ...settings, database });
-    for (const file of ["schema.sql", "stage3.sql", "stage4.sql"]) {
+    for (const file of ["schema.sql", "stage3.sql", "stage4.sql", "cat-info.sql"]) {
       await restored.query(await fs.readFile(path.join(root, "database", file), "utf8"));
     }
     const client = await restored.connect();

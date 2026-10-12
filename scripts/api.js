@@ -93,13 +93,14 @@ async function handleApi(request, response, pathname, config) {
       }
       const body = await readJson(request);
       if (!body || typeof body !== "object" || Array.isArray(body)
-          || Object.keys(body).length !== 2
+          || !Object.keys(body).every(key => ["playId", "score", "catType"].includes(key))
+          || (body.catType !== undefined && body.catType !== null && !["leche", "latte"].includes(body.catType))
           || typeof body.playId !== "string"
           || !UUID_PATTERN.test(body.playId)
           || !Number.isInteger(body.score) || body.score < 0 || body.score > 2147483647) {
-        throw requestError(400, "プレイ番号と0以上の整数スコアを送信してください。");
+        throw requestError(400, "プレイ番号、0以上の整数スコア、正しい猫の種類を送信してください。");
       }
-      const saved = await saveResult(body.playId, body.score, session.user.id);
+      const saved = await saveResult(body.playId, body.score, session.user.id, body.catType ?? null);
       sendJson(response, saved.alreadySaved ? 200 : 201, saved);
     } else {
       throw requestError(404, "APIが見つかりません。");

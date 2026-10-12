@@ -20,6 +20,7 @@ CREATE TABLE public.game_results (
   score INTEGER NOT NULL CHECK (score >= 0),
   played_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   play_id UUID,
+  cat_type TEXT CHECK (cat_type IN ('leche', 'latte')),
   user_id INTEGER REFERENCES public.game_users(id)
 );
 CREATE UNIQUE INDEX game_results_play_id_key ON public.game_results(play_id);

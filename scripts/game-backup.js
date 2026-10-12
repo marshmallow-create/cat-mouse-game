@@ -6,7 +6,7 @@ async function snapshot(pool) {
   try {
     await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
     const users = (await client.query("SELECT id, username, password_hash, created_at FROM game_users ORDER BY id")).rows;
-    const results = (await client.query("SELECT id, score, played_at, play_id, user_id FROM game_results ORDER BY id")).rows;
+    const results = (await client.query("SELECT id, score, played_at, play_id, user_id, cat_type FROM game_results ORDER BY id")).rows;
     const sequences = (await client.query("SELECT sequencename, last_value FROM pg_sequences WHERE schemaname = 'public' AND sequencename IN ('game_users_id_seq', 'game_results_id_seq') ORDER BY sequencename")).rows;
     await client.query("COMMIT");
     return { format: "cat-mouse-game-backup-v1", exportedAt: new Date().toISOString(), users, results, sequences };
@@ -35,7 +35,7 @@ async function restoreIntoEmptyDatabase(client, data) {
       await client.query("INSERT INTO game_users(id,username,password_hash,created_at) VALUES($1,$2,$3,$4)", [user.id, user.username, user.password_hash, user.created_at]);
     }
     for (const result of data.results) {
-      await client.query("INSERT INTO game_results(id,score,played_at,play_id,user_id) OVERRIDING SYSTEM VALUE VALUES($1,$2,$3,$4,$5)", [result.id, result.score, result.played_at, result.play_id, result.user_id]);
+      await client.query("INSERT INTO game_results(id,score,played_at,play_id,user_id,cat_type) OVERRIDING SYSTEM VALUE VALUES($1,$2,$3,$4,$5,$6)", [result.id, result.score, result.played_at, result.play_id, result.user_id, result.cat_type ?? null]);
     }
     for (const [name, records] of [["game_users_id_seq", data.users], ["game_results_id_seq", data.results]]) {
       const sequence = data.sequences.find(item => item.sequencename === name);
