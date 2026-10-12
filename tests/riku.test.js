@@ -109,7 +109,8 @@ test("Latte stops for one second and resumes held input; Riku moves during the s
   assert.equal(context.cat.x, 300);
   assert.equal(context.stunUntil, 16020);
   frame(context, 16020);
-  assert.ok(Math.abs(context.cat.x - (300 + 270 * 1.2 * 2 * 0.02)) < 1e-10);
+  assert.ok(Math.abs(context.cat.x - (300 + 270 * 1.2 * 2.5 * 0.02)) < 1e-10);
+  assert.match(context.boostStatusElement.textContent, /🍓 スピード2\.5倍！/);
   assert.equal(context.catElement.classList.contains("stunned"), false);
   assert.equal(context.rikuBoostUntil, 0);
 });

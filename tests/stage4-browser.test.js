@@ -97,7 +97,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("catSelectionElement.hidden"), false);
     assert.ok(await evaluate("[...document.querySelectorAll('.cat-details')].every(element => element.querySelectorAll('[role=listitem]').length === 3 && !element.textContent.includes('出現'))"));
     assert.ok(await evaluate("document.querySelector('input[value=leche]').closest('label').textContent.includes('🐟：7秒間スピード2倍')"));
-    assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('🍓：5秒間スピード2倍')"));
+    assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('🍓：5秒間スピード2.5倍')"));
     assert.equal(await evaluate("document.getElementById('account-title').hidden"), true);
     assert.equal(await evaluate("accountMessage.textContent"), `ログイン名：${usernames[0]}`);
     assert.ok(await evaluate("document.querySelector('.field-wrap').getClientRects().length > 0 && document.querySelector('.ranking').getClientRects().length > 0"));
@@ -160,7 +160,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("startTime -= 5100");
     await poll(() => evaluate("strawberries.length > 0"));
     assert.equal(await evaluate("strawberries[0].element.textContent"), "🍓");
-    assert.equal(await evaluate("strawberries[0].element.getAttribute('aria-label')"), "苺：5秒間スピード2倍");
+    assert.equal(await evaluate("strawberries[0].element.getAttribute('aria-label')"), "苺：5秒間スピード2.5倍");
     await evaluate("cat.x = strawberries[0].x; cat.y = strawberries[0].y");
     await poll(() => evaluate("catElement.classList.contains('boosted')"));
     assert.ok(await evaluate("boostUntil - performance.now() > 4500 && boostUntil - performance.now() <= 5000"));

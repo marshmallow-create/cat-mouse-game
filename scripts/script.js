@@ -22,8 +22,8 @@ const catChoices = [...document.querySelectorAll('input[name="play-cat"]')];
 const startCatElement = document.getElementById("start-cat");
 const resultCatElement = document.getElementById("result-cat");
 const catTypes = {
-  latte: { name: "ラテ", image: "images/latte.png", item: "苺", emoji: "🍓", speedMultiplier: 1.2, boostDuration: 5000 },
-  leche: { name: "レチェ", image: "images/leche.png", item: "鰹節", emoji: "🐟", speedMultiplier: 1, boostDuration: 7000 }
+  latte: { name: "ラテ", image: "images/latte.png", item: "苺", emoji: "🍓", speedMultiplier: 1.2, boostDuration: 5000, boostMultiplier: 2.5 },
+  leche: { name: "レチェ", image: "images/leche.png", item: "鰹節", emoji: "🐟", speedMultiplier: 1, boostDuration: 7000, boostMultiplier: 2 }
 };
 let selectedCat = "leche";
 let playCat = catTypes[selectedCat];
@@ -387,7 +387,7 @@ function addStrawberry() {
   element.className = "character strawberry";
   element.textContent = playCat.emoji;
   element.setAttribute("role", "img");
-  element.setAttribute("aria-label", `${playCat.item}：${playCat.boostDuration / 1000}秒間スピード2倍`);
+  element.setAttribute("aria-label", `${playCat.item}：${playCat.boostDuration / 1000}秒間スピード${playCat.boostMultiplier}倍`);
   const area = bounds(STRAWBERRY_RADIUS);
   const strawberry = { element, x: 0, y: 0 };
   // 猫の真下に出現して即座に取得されるのを避ける。
@@ -411,7 +411,7 @@ function updateBoostStatus(now) {
   boostStatusElement.textContent = stunned
     ? "リクに触れた！ 1秒間動けない！"
     : active
-      ? `${rikuActive ? "リク：" : playCat.emoji} スピード${rikuActive ? 3 : 2}倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
+      ? `${rikuActive ? "リク：" : playCat.emoji} スピード${rikuActive ? 3 : playCat.boostMultiplier}倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
       : "";
 }
 
@@ -610,7 +610,7 @@ function update(now) {
         - Number(directionHeld("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
       const catSpeed = now < stunUntil ? 0
-        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < rikuBoostUntil ? 3 : now < boostUntil ? 2 : 1);
+        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < rikuBoostUntil ? 3 : now < boostUntil ? playCat.boostMultiplier : 1);
 
       cat.x = clamp(cat.x + horizontal / length * catSpeed * seconds, catArea.minX, catArea.maxX);
       cat.y = clamp(cat.y + vertical / length * catSpeed * seconds, catArea.minY, catArea.maxY);
