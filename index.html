@@ -25,10 +25,9 @@
     <fieldset id="cat-selection" class="cat-selection" hidden>
       <legend>どちらの猫で遊ぶ？</legend>
       <div class="cat-options">
-        <label class="cat-option"><input type="radio" name="play-cat" value="leche" checked><span><img src="images/leche.png" alt=""><strong>レチェ</strong><small>移動スピード：標準（1倍）<br>🐟 鰹節が5秒ごとに出現！<br>取ると7秒間スピードが2倍になるよ！<br>リクに触れると1秒間スピード2倍！</small></span></label>
-        <label class="cat-option"><input type="radio" name="play-cat" value="latte"><span><img src="images/latte.png" alt=""><strong>ラテ</strong><small>移動スピード：レチェの1.2倍！<br>🍓 苺が5秒ごとに出現！<br>取ると5秒間スピードが2倍になるよ！<br>リクに触れると1秒間動けない！</small></span></label>
+        <label class="cat-option"><input type="radio" name="play-cat" value="leche" checked><span><img src="images/leche.png" alt=""><strong>レチェ</strong><span class="cat-details" role="list"><span role="listitem">移動スピード：標準（1倍）</span><span role="listitem">鰹節：7秒間スピード2倍</span><span role="listitem">リクに触れると1秒間スピード3倍</span></span></span></label>
+        <label class="cat-option"><input type="radio" name="play-cat" value="latte"><span><img src="images/latte.png" alt=""><strong>ラテ</strong><span class="cat-details" role="list"><span role="listitem">移動スピード：レチェの1.2倍</span><span role="listitem">苺：5秒間スピード2倍</span><span role="listitem">リクに触れると1秒間動けない</span></span></span></label>
       </div>
-      <p class="ranking-description">開始15秒後にリクが登場して、ランダムに動き回るよ！</p>
     </fieldset>
 
     <section class="field-wrap" aria-label="ゲーム画面">
@@ -83,7 +82,7 @@
       <button id="retry-save" class="secondary-button" type="button" hidden>保存を再試行する</button>
     </section>
     </div>
-    <section class="account" aria-labelledby="account-title">
+    <section class="account" aria-label="ログイン情報">
       <h2 id="account-title">ログイン</h2>
       <div class="account-status">
         <p id="account-message" class="save-message" aria-live="polite">ログイン状態を確認しています…</p>

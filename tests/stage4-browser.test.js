@@ -95,9 +95,11 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("personalBestElement.hidden"), false);
     assert.equal(await evaluate("personalBestElement.textContent"), "自己ベスト：まだ記録がありません。");
     assert.equal(await evaluate("catSelectionElement.hidden"), false);
-    assert.ok(await evaluate("[...document.querySelectorAll('.cat-option small')].every(element => element.textContent.includes('5秒ごとに出現'))"));
-    assert.ok(await evaluate("document.querySelector('input[value=leche]').closest('label').textContent.includes('7秒間スピードが2倍')"));
-    assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('5秒間スピードが2倍')"));
+    assert.ok(await evaluate("[...document.querySelectorAll('.cat-details')].every(element => element.querySelectorAll('[role=listitem]').length === 3 && !element.textContent.includes('出現'))"));
+    assert.ok(await evaluate("document.querySelector('input[value=leche]').closest('label').textContent.includes('鰹節：7秒間スピード2倍')"));
+    assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('苺：5秒間スピード2倍')"));
+    assert.equal(await evaluate("document.getElementById('account-title').hidden"), true);
+    assert.equal(await evaluate("accountMessage.textContent"), `ログイン名：${usernames[0]}`);
     assert.ok(await evaluate("document.querySelector('.field-wrap').getClientRects().length > 0 && document.querySelector('.ranking').getClientRects().length > 0"));
     await evaluate("document.querySelector('input[value=leche]').click()");
     assert.equal(await evaluate("catElement.getAttribute('src')"), "images/leche.png");
@@ -192,7 +194,9 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await poll(() => evaluate("mice.filter(mouse => !mouse.special).length === 10"));
     assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 1);
     await evaluate("score = 7; startTime = performance.now() - 30001");
-    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7P（使用した猫：ラテ）'"));
+    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7P（使用した猫：）'"));
+    assert.equal(await evaluate("personalBestElement.querySelector('img').getAttribute('src')"), "images/latte.png");
+    assert.equal(await evaluate("personalBestElement.querySelector('img').alt"), "ラテ");
     assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'ラテ')"));
     assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/latte.png");
@@ -203,7 +207,9 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // テキスト入力上のゲームキーはpreventDefaultしない。
     assert.equal(await evaluate("const input = document.getElementById('username'); const event = new KeyboardEvent('keydown', {key:'a', bubbles:true, cancelable:true}); input.dispatchEvent(event); event.defaultPrevented"), false);
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}P（使用した猫：レチェ）'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}P（使用した猫：）'`));
+    assert.equal(await evaluate("personalBestElement.querySelector('img').getAttribute('src')"), "images/leche.png");
+    assert.equal(await evaluate("personalBestElement.querySelector('img').alt"), "レチェ");
     assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'レチェ')"));
     assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[0])}) && rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     const aliceRows = (await admin.query("SELECT score FROM game_results WHERE user_id = $1", [aliceId])).rows;
@@ -227,7 +233,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("logoutButton.click()");
     await poll(() => evaluate("currentUser === null && !authBusy"));
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}P（使用した猫：${aliceScore > 9 ? "レチェ" : "ラテ"}）'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}P（使用した猫：）'`));
+    assert.equal(await evaluate("personalBestElement.querySelector('img').alt"), aliceScore > 9 ? "レチェ" : "ラテ");
     assert.equal((await admin.query("SELECT count(*) FROM game_results WHERE user_id = $1", [aliceId])).rows[0].count, "2");
     assert.deepEqual(errors, []);
     // 縦向きでは開始を待ち、横向きで実際のタッチ入力を確認。

@@ -291,6 +291,7 @@ kbd {
 .account #logout { flex: none; margin: 0 0 0 auto; }
 #account-help { font-size: .85rem; }
 .personal-best { font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
+.personal-best-cat { width: 48px; height: 48px; object-fit: contain; vertical-align: middle; margin: 0 4px; }
 button:disabled { opacity: .55; cursor: default; }
 
 .cat-selection { margin: 0 0 24px; padding: 16px; border: 2px solid #b3a6d1; border-radius: 22px; background: #f5f0ff; }
@@ -300,7 +301,8 @@ button:disabled { opacity: .55; cursor: default; }
 .cat-option input { position: absolute; top: 14px; left: 14px; accent-color: #6550b5; }
 .cat-option > span { display: flex; align-items: center; flex-direction: column; gap: 4px; padding: 12px; border: 2px solid #d4cbea; border-radius: 16px; background: #fff; }
 .cat-option img { width: 64px; height: 64px; object-fit: contain; }
-.cat-option small { font-size: 13px; line-height: 1.7; text-align: center; }
+.cat-details { display: block; padding-left: 1.3em; font-size: 13px; line-height: 1.7; text-align: left; }
+.cat-details > span { display: list-item; list-style-type: disc; padding: 2px 0; }
 .cat-option input:checked + span { border-color: #6550b5; background: #fff5cc; box-shadow: 0 3px 0 #6550b5; }
 .cat-option input:focus-visible + span { outline: 3px solid #6550b5; outline-offset: 3px; }
 .cat-selection:disabled .cat-option { cursor: default; opacity: .65; }

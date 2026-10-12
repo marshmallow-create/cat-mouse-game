@@ -63,14 +63,15 @@ test("Riku appears once at 15 seconds, changes direction and stays inside the fi
   assert.equal(riku.dy, -1);
 });
 
-test("Leche gets exactly one second of double speed, without extending contact or shortening item boosts", () => {
+test("Leche gets exactly one second of triple speed, without extending contact or shortening item boosts", () => {
   for (const scale of [1, 0.6]) {
     const context = game("leche", scale);
     vm.runInContext("updateRiku(15000, 0)", context);
     Object.assign(context.riku, { x: 300, y: 250, dx: 0, dy: 0 });
     frame(context, 15020);
     assert.equal(context.rikuBoostUntil, 16020);
-    assert.ok(Math.abs(context.cat.x - (300 + 270 * scale * 2 * 0.02)) < 1e-10);
+    assert.ok(Math.abs(context.cat.x - (300 + 270 * scale * 3 * 0.02)) < 1e-10);
+    assert.match(context.boostStatusElement.textContent, /リク： スピード3倍！ あと1秒/);
     assert.equal(context.catElement.classList.contains("boosted"), true);
     context.cat.x = 300;
     frame(context, 16020);
@@ -81,9 +82,16 @@ test("Leche gets exactly one second of double speed, without extending contact o
     context.riku.x = 700;
     vm.runInContext("updateRiku(16030, 0)", context);
     context.riku.x = context.cat.x;
+    const beforeContact = context.cat.x;
     frame(context, 16040);
     assert.equal(context.rikuBoostUntil, 17040);
     assert.equal(context.boostUntil, 22000);
+    assert.ok(Math.abs(context.cat.x - (beforeContact + 270 * scale * 3 * 0.02)) < 1e-10);
+    assert.match(context.boostStatusElement.textContent, /リク： スピード3倍！ あと1秒/);
+    const beforeExpiry = context.cat.x;
+    frame(context, 17040);
+    assert.ok(Math.abs(context.cat.x - (beforeExpiry + 270 * scale * 2 * 0.02)) < 1e-10);
+    assert.match(context.boostStatusElement.textContent, /🐟 スピード2倍！ あと5秒/);
   }
 });
 

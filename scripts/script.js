@@ -157,10 +157,10 @@ function applySession(data) {
     saveStatusElement.textContent = "";
   }
   accountForm.hidden = !!currentUser;
-  document.getElementById("account-title").textContent = currentUser ? "利用者アカウント" : "ログイン";
+  document.getElementById("account-title").hidden = !!currentUser;
   logoutButton.hidden = !currentUser;
   personalBestElement.hidden = !currentUser;
-  accountMessage.textContent = currentUser ? `${currentUser.username} でログイン中です。` : "新規登録またはログインしてから遊んでください。";
+  accountMessage.textContent = currentUser ? `ログイン名：${currentUser.username}` : "新規登録またはログインしてから遊んでください。";
   retrySaveButton.hidden = !pendingResults.length;
   updateAccountControls();
   if (changed && currentUser && !playing && !countingDown) placeCharacters();
@@ -278,8 +278,20 @@ async function loadRankings() {
       rankingBodyElement.appendChild(row);
     });
     personalBestElement.textContent = data.personalBest
-      ? `自己ベスト：${data.personalBest.score}P（使用した猫：${catTypes[data.personalBest.cat_type]?.name || "不明"}）`
+      ? `自己ベスト：${data.personalBest.score}P（使用した猫：`
       : "自己ベスト：まだ記録がありません。";
+    if (data.personalBest) {
+      const bestCat = catTypes[data.personalBest.cat_type];
+      if (bestCat?.image) {
+        const image = document.createElement("img");
+        image.className = "personal-best-cat";
+        image.src = bestCat.image;
+        image.alt = bestCat.name;
+        image.title = bestCat.name;
+        personalBestElement.appendChild(image);
+      } else personalBestElement.append("不明");
+      personalBestElement.append("）");
+    }
     rankingMessageElement.textContent = data.results.length ? "" : "まだ記録がありません。最初の1回を遊んでみよう！";
   } catch (error) {
     if (requestNumber === rankingRequestNumber) {
@@ -389,7 +401,8 @@ function addStrawberry() {
 }
 
 function updateBoostStatus(now) {
-  const effectUntil = Math.max(boostUntil, rikuBoostUntil);
+  const rikuActive = now < rikuBoostUntil;
+  const effectUntil = rikuActive ? rikuBoostUntil : boostUntil;
   const active = now < effectUntil;
   const stunned = now < stunUntil;
   catElement.classList.toggle("boosted", active);
@@ -398,7 +411,7 @@ function updateBoostStatus(now) {
   boostStatusElement.textContent = stunned
     ? "リクに触れた！ 1秒間動けない！"
     : active
-      ? `${rikuBoostUntil > boostUntil ? "リク：" : playCat.emoji} スピード2倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
+      ? `${rikuActive ? "リク：" : playCat.emoji} スピード${rikuActive ? 3 : 2}倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
       : "";
 }
 
@@ -597,7 +610,7 @@ function update(now) {
         - Number(directionHeld("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
       const catSpeed = now < stunUntil ? 0
-        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < Math.max(boostUntil, rikuBoostUntil) ? 2 : 1);
+        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < rikuBoostUntil ? 3 : now < boostUntil ? 2 : 1);
 
       cat.x = clamp(cat.x + horizontal / length * catSpeed * seconds, catArea.minX, catArea.maxX);
       cat.y = clamp(cat.y + vertical / length * catSpeed * seconds, catArea.minY, catArea.maxY);
