@@ -41,16 +41,25 @@ async function saveResult(playId, score, userId) {
   return { result: existing.rows[0], alreadySaved: true };
 }
 
-async function getRanking(userId) {
+async function getRanking() {
+  const result = await getPool().query(`
+    SELECT r.id, r.score, r.played_at, u.username
+    FROM game_results r JOIN game_users u ON u.id = r.user_id
+    ORDER BY r.score DESC, r.played_at DESC, r.id DESC LIMIT 10
+  `);
+  return result.rows;
+}
+
+async function getPersonalBest(userId) {
   const result = await getPool().query(`
     SELECT id, score, played_at FROM game_results WHERE user_id = $1
-    ORDER BY score DESC, played_at DESC, id DESC LIMIT 10
+    ORDER BY score DESC, played_at DESC, id DESC LIMIT 1
   `, [userId]);
-  return result.rows;
+  return result.rows[0] || null;
 }
 
 async function closeDatabase() {
   if (pool) await pool.end();
 }
 
-module.exports = { saveResult, getRanking, closeDatabase, getPool };
+module.exports = { saveResult, getRanking, getPersonalBest, closeDatabase, getPool };

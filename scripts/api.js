@@ -1,5 +1,5 @@
 // HTTPの要求を確認し、データベースの結果をJSONで返す窓口。
-const { saveResult, getRanking } = require("./game-store");
+const { saveResult, getRanking, getPersonalBest } = require("./game-store");
 const { currentSession, authenticate, requireCsrf, logout } = require("./auth");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -81,7 +81,8 @@ async function handleApi(request, response, pathname, config) {
         response.setHeader("Allow", "GET");
         throw requestError(405, "ランキングはGETで取得してください。");
       }
-      sendJson(response, 200, { results: await getRanking(session.user.id) });
+      const [results, personalBest] = await Promise.all([getRanking(), getPersonalBest(session.user.id)]);
+      sendJson(response, 200, { results, personalBest });
     } else if (pathname === "/api/results") {
       if (request.method !== "POST") {
         response.setHeader("Allow", "POST");

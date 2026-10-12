@@ -54,8 +54,8 @@ test("Supabase: register, login, save once, ranking and logout", { timeout: 2500
     const duplicate = await api("/api/results", { playId, score: 4 });
     assert.equal(duplicate.result.id, saved.result.id);
     const ranking = await api("/api/rankings");
-    assert.equal(ranking.results.length, 1);
-    assert.equal(ranking.results[0].score, 4);
+    assert.ok(ranking.results.length <= 10);
+    assert.equal(ranking.personalBest.score, 4);
     const image = await fetch(base + "/images/leche.png");
     assert.equal(image.status, 200);
     await api("/api/auth/logout", {});

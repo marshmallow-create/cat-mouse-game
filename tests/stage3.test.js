@@ -114,14 +114,19 @@ test("stages 3 and 4: authentication, ownership, API, failure and persistence", 
     const original = saved[0].result;
     const bob = await account(username + "_b");
     assert.equal((await request("/api/rankings", { headers: { "X-Game-User": String(aliceId) } })).status, 409);
-    assert.deepEqual((await (await request("/api/rankings")).json()).results, []);
+    const bobInitialRanking = await (await request("/api/rankings")).json();
+    assert.equal(bobInitialRanking.personalBest, null);
+    assert.ok(bobInitialRanking.results.some(result => result.id === original.id && result.username === username));
     assert.equal((await post({ playId, score: 12 })).status, 409);
     assert.equal((await post({ playId: makeId(), score: 15 }, { headers: { "Content-Type": "application/json", "X-Game-User": String(aliceId) } })).status, 409);
     assert.equal((await post({ playId: makeId(), score: 15, user_id: aliceId })).status, 400);
     assert.equal((await post({ playId: makeId(), score: 15 }, { headers: { "Content-Type": "application/json", "X-CSRF-Token": alice.session.csrfToken } })).status, 403);
     const bobResult = await post({ playId: makeId(), score: 17 });
     assert.equal(bobResult.status, 201);
-    assert.equal((await (await request("/api/rankings")).json()).results.length, 1);
+    const sharedRanking = await (await request("/api/rankings")).json();
+    assert.ok(sharedRanking.results.some(result => result.username === username));
+    assert.ok(sharedRanking.results.some(result => result.username === username + "_b"));
+    assert.equal(sharedRanking.personalBest.score, 17);
     assert.equal((await request("/api/results", { method: "DELETE" })).status, 405);
     const logoutResponse = await request("/api/auth/logout", { method: "POST" });
     assert.equal(logoutResponse.status, 200);
@@ -171,10 +176,19 @@ test("stages 3 and 4: authentication, ownership, API, failure and persistence", 
     }
     await admin.query("UPDATE game_results SET score = 2000000100, played_at = $1 WHERE play_id = $2", ["2026-10-09T01:00:00Z", rankingIds[0]]);
     await admin.query("UPDATE game_results SET score = 2000000100, played_at = $1 WHERE play_id = $2", ["2026-10-09T02:00:00Z", rankingIds[1]]);
-    const rankings = (await (await request("/api/rankings")).json()).results;
-    const expected = (await admin.query("SELECT id, score, played_at FROM game_results WHERE user_id = $1 ORDER BY score DESC, played_at DESC, id DESC LIMIT 10", [aliceId])).rows;
+    const rankingData = await (await request("/api/rankings")).json();
+    const rankings = rankingData.results;
+    const expected = (await admin.query("SELECT r.id, r.score, r.played_at, u.username FROM game_results r JOIN game_users u ON u.id = r.user_id ORDER BY r.score DESC, r.played_at DESC, r.id DESC LIMIT 10")).rows;
     assert.equal(rankings.length, 10);
     assert.deepEqual(rankings, JSON.parse(JSON.stringify(expected)));
+    assert.equal(rankingData.personalBest.score, 2000000100);
+    assert.equal(rankingData.personalBest.id, rankings[0].id);
+    // 本人の記録が全体の上位10件に入らなくても、自己ベストを返す。
+    await account(username + "_b", false);
+    const bobOutsideTopTen = await (await request("/api/rankings")).json();
+    assert.equal(bobOutsideTopTen.personalBest.score, 17);
+    assert.ok(bobOutsideTopTen.results.every(result => result.username === username));
+    await account(username, false);
     assert.equal(Number((await admin.query("SELECT count(*) FROM game_results")).rows[0].count), initialCount + 15);
 
     // アプリ用アカウントは読み出し・追加だけ。管理操作は許可されない。

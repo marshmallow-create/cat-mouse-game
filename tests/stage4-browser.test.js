@@ -90,6 +90,10 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     };
     await signIn(usernames[0], true);
     const aliceId = await evaluate("currentUser.id");
+    assert.equal(await evaluate("selectedCat"), "leche");
+    assert.equal(await evaluate("document.querySelector('input[name=play-cat]:checked').value"), "leche");
+    assert.equal(await evaluate("personalBestElement.hidden"), false);
+    assert.equal(await evaluate("personalBestElement.textContent"), "自己ベスト：まだ記録がありません。");
     assert.equal(await evaluate("catSelectionElement.hidden"), false);
     assert.ok(await evaluate("[...document.querySelectorAll('.cat-option small')].every(element => element.textContent.includes('5秒ごとに出現') && element.textContent.includes('5秒間スピードが2倍'))"));
     assert.ok(await evaluate("document.querySelector('.field-wrap').getClientRects().length > 0 && document.querySelector('.ranking').getClientRects().length > 0"));
@@ -118,6 +122,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.ok(await evaluate("boostStatusElement.textContent.includes('🐟')"));
     await poll(() => evaluate("!playing && !gameOverElement.hidden && !savingResults"), 35000);
     assert.equal(await evaluate("pendingResults.length"), 1);
+    assert.equal(await evaluate("selectedCat"), "leche");
     assert.equal(await evaluate("timeElement.textContent"), "0");
     assert.equal(await evaluate("mice.length"), 6);
     assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/leche.png");
@@ -128,17 +133,20 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await cdp("Page.reload");
     await poll(() => evaluate("typeof currentUser !== 'undefined' && currentUser !== null && !authBusy && !savingResults"));
     assert.equal(await evaluate("pendingResults.length"), 1);
+    assert.equal(await evaluate("document.querySelector('input[name=play-cat]:checked').value"), "leche");
     await evaluate("logoutButton.click()");
     await poll(() => evaluate("currentUser === null && !authBusy"));
+    assert.equal(await evaluate("personalBestElement.hidden"), true);
     assert.equal(await evaluate("document.querySelector('.field-wrap').getClientRects().length"), 0);
     assert.equal(await evaluate("document.querySelector('.ranking').getClientRects().length"), 0);
     await signIn(usernames[1], true);
     const bobId = await evaluate("currentUser.id");
     assert.equal(await evaluate("pendingResults.length"), 0);
-    assert.equal(await evaluate("rankingBodyElement.children.length"), 0);
+    assert.equal(await evaluate("personalBestElement.textContent"), "自己ベスト：まだ記録がありません。");
     assert.equal(await evaluate(`JSON.parse(localStorage.getItem(storageKey(${aliceId}))).length`), 1);
     // 別利用者で戻ったときに、Aの控えをBへ送らない。
     await cdp("Network.setBlockedURLs", { urls: [] });
+    await evaluate("document.querySelector('input[value=latte]').click()");
     await evaluate("startButton.click()");
     await poll(() => evaluate("playing"));
     assert.equal(await evaluate("catElement.getAttribute('src')"), "images/latte.png");
@@ -146,7 +154,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await poll(() => evaluate("strawberries.length > 0"));
     assert.equal(await evaluate("strawberries[0].element.textContent"), "🍓");
     await evaluate("score = 7; startTime = performance.now() - 30001");
-    await poll(() => evaluate("!playing && !savingResults && rankingBodyElement.children.length === 1"));
+    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7匹'"));
+    assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/latte.png");
     assert.equal((await admin.query("SELECT score FROM game_results WHERE user_id = $1", [bobId])).rows[0].score, 7);
     assert.equal((await admin.query("SELECT count(*) FROM game_results WHERE user_id = $1", [aliceId])).rows[0].count, "0");
@@ -155,7 +164,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // テキスト入力上のゲームキーはpreventDefaultしない。
     assert.equal(await evaluate("const input = document.getElementById('username'); const event = new KeyboardEvent('keydown', {key:'a', bubbles:true, cancelable:true}); input.dispatchEvent(event); event.defaultPrevented"), false);
     await signIn(usernames[0], false);
-    await poll(() => evaluate("pendingResults.length === 0 && rankingBodyElement.children.length === 1"));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}匹'`));
+    assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[0])}) && rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
     const aliceRows = (await admin.query("SELECT score FROM game_results WHERE user_id = $1", [aliceId])).rows;
     assert.deepEqual(aliceRows.map(row => row.score), [aliceScore]);
     assert.equal(await evaluate(`localStorage.getItem(storageKey(${aliceId}))`), null);
@@ -169,35 +179,68 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("refreshRankingButton.click()");
     await poll(() => evaluate("!refreshRankingButton.disabled"));
     assert.equal(await evaluate("rankingBodyElement.children.length"), 0);
+    assert.ok(await evaluate("personalBestElement.textContent.includes('取得できませんでした')"));
     await cdp("Page.reload");
     await poll(() => evaluate(`currentUser?.id === ${bobId} && !authBusy`));
     assert.equal(await evaluate("pendingResults.length"), 0);
     await evaluate("logoutButton.click()");
     await poll(() => evaluate("currentUser === null && !authBusy"));
     await signIn(usernames[0], false);
-    await poll(() => evaluate("pendingResults.length === 0 && rankingBodyElement.children.length === 2"));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}匹'`));
     assert.equal((await admin.query("SELECT count(*) FROM game_results WHERE user_id = $1", [aliceId])).rows[0].count, "2");
     assert.deepEqual(errors, []);
-    // スマホ幅で、実際のタッチ入力による移動と指を離した後の停止を確認。
+    // 縦向きでは開始を待ち、横向きで実際のタッチ入力を確認。
     await cdp("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await cdp("Emulation.setTouchEmulationEnabled", { enabled: true });
+    assert.equal(await evaluate("innerWidth"), 390);
     assert.ok(await evaluate("document.documentElement.scrollWidth <= innerWidth"));
-    assert.equal(await evaluate("getComputedStyle(document.querySelector('.touch-controls')).display"), "block");
+    assert.equal(await evaluate("document.querySelector('.touch-controls')"), null);
     await evaluate("startButton.click()");
+    await poll(() => evaluate("countingDown && !rotateGuide.hidden"));
+    await delay(350);
+    assert.equal(await evaluate("countdownNumberElement.textContent"), "3");
+    assert.equal(await evaluate("playing"), false);
+    await cdp("Emulation.setDeviceMetricsOverride", { width: 844, height: 390, deviceScaleFactor: 1, mobile: true });
     await poll(() => evaluate("playing"));
-    await evaluate("document.querySelector('[data-direction=arrowright]').scrollIntoView({block:'center'})");
-    const touchPosition = await evaluate("(() => { const rect=document.querySelector('[data-direction=arrowright]').getBoundingClientRect(); return {x:rect.x+rect.width/2,y:rect.y+rect.height/2}; })()");
+    assert.equal(await evaluate("rotateGuide.hidden"), true);
+    assert.ok(await evaluate("(() => { const rect=field.getBoundingClientRect(); return rect.width > innerWidth * .9 && rect.height > innerHeight * .8 && rect.bottom <= innerHeight; })()"));
+    assert.equal(await evaluate("document.querySelector('.ranking').getClientRects().length"), 0);
+    assert.equal(await evaluate("document.querySelector('.account').getClientRects().length"), 0);
+    const touchPosition = await evaluate("(() => { const rect=field.getBoundingClientRect(); return {x:rect.x+80,y:rect.y+100}; })()");
     const beforeTouch = await evaluate("cat.x");
     await cdp("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...touchPosition, id: 1 }] });
+    await delay(100);
+    assert.equal(await evaluate("cat.x"), beforeTouch);
+    await cdp("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: touchPosition.x + 40, y: touchPosition.y + 40, id: 1 }] });
+    const beforeDiagonalY = await evaluate("cat.y");
     await delay(150);
     await cdp("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     assert.ok(await evaluate(`cat.x > ${beforeTouch}`));
-    assert.equal(await evaluate("touchKeys.size"), 0);
+    assert.ok(await evaluate(`cat.y > ${beforeDiagonalY}`));
+    assert.equal(await evaluate("touch.pointerId"), null);
     const stoppedX = await evaluate("cat.x");
     await delay(150);
     assert.equal(await evaluate("cat.x"), stoppedX);
+    // キャンセル時にも停止し、画面回転中は時間とアイテム効果を保持する。
+    await cdp("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...touchPosition, id: 1 }] });
+    await cdp("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: touchPosition.x + 40, y: touchPosition.y, id: 1 }] });
+    await cdp("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+    assert.equal(await evaluate("touch.pointerId"), null);
+    await evaluate("boostUntil = performance.now() + 5000");
+    await cdp("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await poll(() => evaluate("!rotateGuide.hidden"));
+    const frozenTime = await evaluate("timeElement.textContent");
+    await delay(1200);
+    assert.equal(await evaluate("timeElement.textContent"), frozenTime);
+    await cdp("Emulation.setDeviceMetricsOverride", { width: 844, height: 390, deviceScaleFactor: 1, mobile: true });
+    await poll(() => evaluate("rotateGuide.hidden"));
+    assert.ok(await evaluate("boostUntil - performance.now() > 4500"));
+    const landscapeScreenshot = await cdp("Page.captureScreenshot", { format: "png" });
+    fs.writeFileSync(path.join(root, ".local", "landscape-touch-preview.png"), Buffer.from(landscapeScreenshot.data, "base64"));
     await evaluate("startTime = performance.now() - 30001");
     await poll(() => evaluate("!playing && !savingResults"));
+    assert.ok(await evaluate("document.querySelector('.ranking').getClientRects().length > 0 && document.querySelector('.account').getClientRects().length > 0"));
+    await cdp("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     assert.ok(await evaluate("(() => { const button=restartButton.getBoundingClientRect(); const area=field.getBoundingClientRect(); return button.bottom <= area.bottom && button.top >= area.top; })()"));
     assert.deepEqual(errors, []);
     const mobileScreenshot = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
@@ -206,7 +249,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // レビュー用のスクリーンショット。
     const screenshot = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
     fs.writeFileSync(path.join(root, ".local", "stage4-preview.png"), Buffer.from(screenshot.data, "base64"));
-    console.log("Edge: real 30-second game, movement, reload, two users, queue retry, changed shared Cookie; no JavaScript exceptions.");
+    console.log("Edge: default Leche, shared ranking with usernames, personal best, real 30-second game, queue retry and changed shared Cookie; no JavaScript exceptions.");
   } finally {
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ id: ++commandId, method: "Browser.close" }));

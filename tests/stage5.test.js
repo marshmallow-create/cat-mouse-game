@@ -70,7 +70,9 @@ test("production proxy requests, Secure sessions, private logs and backup restor
     const playId = crypto.randomUUID();
     assert.equal((await post("/api/results", { playId, score: 11 })).status, 201);
     assert.equal((await post("/api/results", { playId, score: 11 })).status, 200);
-    assert.equal((await (await request("/api/rankings")).json()).results[0].score, 11);
+    const ranking = await (await request("/api/rankings")).json();
+    assert.equal(ranking.personalBest.score, 11);
+    assert.ok(ranking.results.some(result => result.username === username && result.score === 11));
     const health = await request("/healthz");
     assert.equal(health.status, 200); assert.equal(await health.text(), "ok");
     assert.equal((await request("/healthz", { method: "POST" })).status, 405);

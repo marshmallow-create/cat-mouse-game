@@ -18,6 +18,7 @@ body {
 }
 
 .game-card {
+  min-width: 0;
   width: min(100%, 980px);
   padding: clamp(20px, 4vw, 38px);
   border: 3px solid #48426a;
@@ -182,16 +183,69 @@ button:disabled { opacity: .65; cursor: wait; }
 .secondary-button:hover { background: #f0e8ff; }
 .secondary-button:active:not(:disabled) { box-shadow: none; }
 .ranking-table-wrap { overflow-x: auto; }
-.ranking-table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+.ranking-table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 14px; text-align: left; }
 .ranking-table th, .ranking-table td { padding: 12px 8px; border-bottom: 1px solid #bddce8; }
 .ranking-table th { color: #48426a; font-size: 12px; }
+.ranking-table td:nth-child(2) { overflow-wrap: anywhere; }
+.ranking-table th, .ranking-table td:first-child, .ranking-table td:nth-child(3), .ranking-table td:last-child { white-space: nowrap; }
 .ranking-table .current-result { background: #fff0b5; font-weight: 700; }
 
 .instructions { margin: 19px 0 0; text-align: center; font-size: 14px; font-weight: 700; }
-.touch-controls { display: none; margin-top: 20px; text-align: center; }
-.touch-controls button { min-width: 58px; min-height: 52px; margin: 4px; padding: 8px 16px; touch-action: none; user-select: none; }
-.touch-controls p { margin: 10px 0 0; font-size: 13px; }
-@media (pointer: coarse), (max-width: 680px) { .touch-controls { display: block; } }
+.touch-instructions { display: none; }
+@media (pointer: coarse), (max-width: 680px) {
+  .touch-instructions { display: inline; }
+  .keyboard-instructions { display: none; }
+}
+.field { touch-action: none; user-select: none; -webkit-user-select: none; }
+.touch-origin, .touch-stick {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.touch-origin { width: 88px; height: 88px; border: 2px solid #ffffff99; background: #ffffff26; }
+.touch-stick { width: 32px; height: 32px; background: #fff9; border: 2px solid #fff; }
+.rotate-guide {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #fff4cf;
+  text-align: center;
+}
+.rotate-guide > span { font-size: 80px; color: #6550b5; }
+.rotate-guide strong { font-size: 24px; }
+.rotate-guide p { line-height: 1.8; }
+body.mobile-play { overflow: hidden; padding: 0; }
+.mobile-play .game-card {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-play .game-header { flex: none; flex-direction: row; justify-content: flex-end; margin: 0 0 5px; padding: 0; border: 0; }
+.mobile-play .game-header > div:first-child,
+.mobile-play .cat-selection,
+.mobile-play .instructions,
+.mobile-play .ranking,
+.mobile-play .account { display: none; }
+.mobile-play .status { gap: 8px; }
+.mobile-play .status-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 3px 10px; border-radius: 10px; box-shadow: none; }
+.mobile-play .status-item strong { font-size: 20px; }
+.mobile-play #game-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mobile-play .field-wrap { flex: 1; min-height: 0; padding: 4px; border-radius: 15px; box-shadow: none; }
+.mobile-play .field { height: 100%; border-radius: 12px; }
 kbd {
   display: inline-block;
   min-width: 22px;
@@ -233,6 +287,7 @@ kbd {
 .account-status #account-message { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
 .account #logout { flex: none; margin: 0 0 0 auto; }
 #account-help { font-size: .85rem; }
+.personal-best { font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
 button:disabled { opacity: .55; cursor: default; }
 
 .cat-selection { margin: 0 0 24px; padding: 16px; border: 2px solid #b3a6d1; border-radius: 22px; background: #f5f0ff; }

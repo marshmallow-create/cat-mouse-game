@@ -25,7 +25,7 @@ const catTypes = {
   latte: { name: "ラテ", image: "images/latte.png", item: "苺", emoji: "🍓" },
   leche: { name: "レチェ", image: "images/leche.png", item: "鰹節", emoji: "🐟" }
 };
-let selectedCat = "latte";
+let selectedCat = "leche";
 let playCat = catTypes[selectedCat];
 
 function updateCatPreview() {
@@ -58,8 +58,14 @@ const CATCH_DISTANCE = 48;
 const DIRECTION_INTERVAL = 850; // ミリ秒
 
 const keys = new Set();
-const touchKeys = new Map();
-const directionHeld = key => keys.has(key) || [...touchKeys.values()].includes(key);
+const directionHeld = key => keys.has(key);
+const touch = { pointerId: null, x: 0, y: 0, dx: 0, dy: 0 };
+const touchOrigin = document.getElementById("touch-origin");
+const touchStick = document.getElementById("touch-stick");
+const rotateGuide = document.getElementById("rotate-guide");
+const mobileControls = matchMedia("(pointer: coarse), (max-width: 680px)");
+let mobilePlay = false;
+let orientationPausedAt = null;
 const cat = { x: 0, y: 0 };
 const mice = [{ element: mouseElement, x: 0, y: 0, dx: 0, dy: 0 }];
 const strawberries = [];
@@ -85,6 +91,7 @@ let authVersion = 0;
 let pendingResults = [];
 const accountForm = document.getElementById("account-form");
 const accountMessage = document.getElementById("account-message");
+const personalBestElement = document.getElementById("personal-best");
 const logoutButton = document.getElementById("logout");
 const storageKey = userId => `latte-game-pending-results-v2-user-${userId}`;
 
@@ -97,7 +104,29 @@ function updateAccountControls() {
   catSelectionElement.disabled = busy || !currentUser;
   startButton.disabled = authBusy || savingResults || !currentUser;
   restartButton.disabled = authBusy || savingResults || !currentUser;
-  for (const button of document.querySelectorAll("[data-direction]")) button.disabled = !playing;
+  const immersive = mobilePlay && (playing || countingDown);
+  const changed = document.body.classList.contains("mobile-play") !== immersive;
+  document.body.classList.toggle("mobile-play", immersive);
+  updateOrientationState();
+  if (changed) resizeCharacters();
+}
+
+function updateOrientationState() {
+  const paused = mobilePlay && (playing || countingDown) && matchMedia("(orientation: portrait)").matches;
+  rotateGuide.hidden = !paused;
+  if (paused && orientationPausedAt === null) {
+    orientationPausedAt = performance.now();
+    clearMovement();
+  } else if (!paused && orientationPausedAt !== null) {
+    const now = performance.now();
+    const duration = now - orientationPausedAt;
+    countdownStartTime += duration;
+    startTime += duration;
+    lastDirectionTime += duration;
+    if (boostUntil) boostUntil += duration;
+    previousTime = now;
+    orientationPausedAt = null;
+  }
 }
 
 function applySession(data) {
@@ -108,6 +137,7 @@ function applySession(data) {
     authVersion++;
     rankingRequestNumber++;
     rankingBodyElement.replaceChildren();
+    personalBestElement.textContent = "自己ベスト：読み込み中…";
     lastSavedResultId = null;
     queueCanPersist = true;
     pendingResults = currentUser ? restorePendingResults(currentUser.id) : [];
@@ -117,6 +147,7 @@ function applySession(data) {
   accountForm.hidden = !!currentUser;
   document.getElementById("account-title").textContent = currentUser ? "利用者アカウント" : "ログイン";
   logoutButton.hidden = !currentUser;
+  personalBestElement.hidden = !currentUser;
   accountMessage.textContent = currentUser ? `${currentUser.username} でログイン中です。` : "新規登録またはログインしてから遊んでください。";
   retrySaveButton.hidden = !pendingResults.length;
   updateAccountControls();
@@ -165,7 +196,7 @@ logoutButton.addEventListener("click", async () => {
   try {
     await requestApi("/api/auth/logout", { method: "POST", headers: { "X-CSRF-Token": csrfToken } });
     applySession({ user: null });
-    rankingMessageElement.textContent = "ログインすると自分の記録が表示されます。";
+    rankingMessageElement.textContent = "ログインするとみんなのランキングが表示されます。";
   } catch (error) { accountMessage.textContent = error.message; }
   finally { authBusy = false; updateAccountControls(); }
 });
@@ -210,7 +241,7 @@ async function loadRankings() {
   const requestNumber = ++rankingRequestNumber;
   if (!currentUser) {
     rankingBodyElement.replaceChildren();
-    rankingMessageElement.textContent = "ログインすると自分の記録が表示されます。";
+    rankingMessageElement.textContent = "ログインするとみんなのランキングが表示されます。";
     refreshRankingButton.disabled = false;
     return;
   }
@@ -225,7 +256,7 @@ async function loadRankings() {
     data.results.forEach((result, index) => {
       const row = document.createElement("tr");
       if (result.id === lastSavedResultId) row.className = "current-result";
-      const values = [`${index + 1}位`, `${result.score}匹`, formatter.format(new Date(result.played_at))];
+      const values = [`${index + 1}位`, result.username, `${result.score}匹`, formatter.format(new Date(result.played_at))];
       for (const value of values) {
         const cell = document.createElement("td");
         cell.textContent = value;
@@ -233,10 +264,14 @@ async function loadRankings() {
       }
       rankingBodyElement.appendChild(row);
     });
+    personalBestElement.textContent = data.personalBest
+      ? `自己ベスト：${data.personalBest.score}匹`
+      : "自己ベスト：まだ記録がありません。";
     rankingMessageElement.textContent = data.results.length ? "" : "まだ記録がありません。最初の1回を遊んでみよう！";
   } catch (error) {
     if (requestNumber === rankingRequestNumber) {
       rankingBodyElement.replaceChildren();
+      personalBestElement.textContent = "自己ベスト：取得できませんでした。「更新する」で再試行してください。";
       rankingMessageElement.textContent = `記録を読み込めませんでした。「更新する」で再試行できます。${error.message}`;
     }
   } finally {
@@ -417,9 +452,11 @@ async function beginCountdown() {
   countdownScreenElement.hidden = false;
   playing = false;
   countingDown = true;
-  updateAccountControls();
+  mobilePlay = mobileControls.matches;
   countdownStartTime = performance.now();
-  if (matchMedia("(pointer: coarse), (max-width: 680px)").matches) field.scrollIntoView({ block: "start", behavior: "smooth" });
+  previousTime = countdownStartTime;
+  updateAccountControls();
+  placeCharacters();
 }
 
 function startGame(now) {
@@ -427,6 +464,7 @@ function startGame(now) {
   countingDown = false;
   playing = true;
   updateAccountControls();
+  placeCharacters();
   startTime = now;
   previousTime = now;
   lastDirectionTime = now;
@@ -452,6 +490,11 @@ function endGame() {
 }
 
 function update(now) {
+  if (orientationPausedAt !== null) {
+    previousTime = now;
+    requestAnimationFrame(update);
+    return;
+  }
   if (countingDown) {
     const elapsed = now - countdownStartTime;
     if (elapsed >= COUNTDOWN_LENGTH) {
@@ -472,9 +515,9 @@ function update(now) {
       const seconds = Math.min((now - previousTime) / 1000, 0.05);
       const area = bounds();
       const catArea = bounds(CAT_RADIUS);
-      const horizontal = Number(directionHeld("arrowright") || keys.has("d"))
+      const horizontal = touch.pointerId !== null ? touch.dx : Number(directionHeld("arrowright") || keys.has("d"))
         - Number(directionHeld("arrowleft") || keys.has("a"));
-      const vertical = Number(directionHeld("arrowdown") || keys.has("s"))
+      const vertical = touch.pointerId !== null ? touch.dy : Number(directionHeld("arrowdown") || keys.has("s"))
         - Number(directionHeld("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
       const catSpeed = CAT_SPEED * (now < boostUntil ? 2 : 1);
@@ -537,27 +580,51 @@ window.addEventListener("keydown", (event) => {
   if (event.target.closest("input, textarea")) return;
   if (movementKeys.has(key)) {
     event.preventDefault();
-    if (playing) keys.add(key);
+    if (playing && orientationPausedAt === null) keys.add(key);
   }
 });
 
 window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
-function clearMovement() { keys.clear(); touchKeys.clear(); }
+function clearMovement() {
+  keys.clear();
+  const pointerId = touch.pointerId;
+  touch.pointerId = null;
+  touch.dx = touch.dy = 0;
+  touchOrigin.hidden = touchStick.hidden = true;
+  if (pointerId !== null && field.hasPointerCapture(pointerId)) field.releasePointerCapture(pointerId);
+}
 window.addEventListener("blur", clearMovement);
 document.addEventListener("visibilitychange", () => { if (document.hidden) clearMovement(); });
-for (const button of document.querySelectorAll("[data-direction]")) {
-  button.addEventListener("pointerdown", event => {
-    if (!playing) return;
-    event.preventDefault();
-    touchKeys.set(event.pointerId, button.dataset.direction);
-    button.setPointerCapture(event.pointerId);
-  });
-  for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
-    button.addEventListener(name, event => touchKeys.delete(event.pointerId));
-  }
+field.addEventListener("pointerdown", event => {
+  if (!playing || orientationPausedAt !== null || touch.pointerId !== null || event.button !== 0) return;
+  event.preventDefault();
+  touch.pointerId = event.pointerId;
+  touch.x = event.clientX;
+  touch.y = event.clientY;
+  touch.dx = touch.dy = 0;
+  field.setPointerCapture(event.pointerId);
+  const rect = field.getBoundingClientRect();
+  touchOrigin.style.left = touchStick.style.left = `${touch.x - rect.left - field.clientLeft}px`;
+  touchOrigin.style.top = touchStick.style.top = `${touch.y - rect.top - field.clientTop}px`;
+  touchOrigin.hidden = touchStick.hidden = false;
+});
+field.addEventListener("pointermove", event => {
+  if (event.pointerId !== touch.pointerId) return;
+  const dx = event.clientX - touch.x;
+  const dy = event.clientY - touch.y;
+  const length = Math.hypot(dx, dy);
+  touch.dx = length > 8 ? dx / length : 0;
+  touch.dy = length > 8 ? dy / length : 0;
+  const scale = length ? Math.min(length, 36) / length : 0;
+  const rect = field.getBoundingClientRect();
+  touchStick.style.left = `${touch.x - rect.left - field.clientLeft + dx * scale}px`;
+  touchStick.style.top = `${touch.y - rect.top - field.clientTop + dy * scale}px`;
+});
+for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  field.addEventListener(name, event => { if (event.pointerId === touch.pointerId) clearMovement(); });
 }
 
-window.addEventListener("resize", () => {
+function resizeCharacters() {
   const area = bounds();
   const catArea = bounds(CAT_RADIUS);
   cat.x = clamp(cat.x, catArea.minX, catArea.maxX);
@@ -572,6 +639,11 @@ window.addEventListener("resize", () => {
     strawberry.y = clamp(strawberry.y, strawberryArea.minY, strawberryArea.maxY);
   }
   draw();
+}
+window.addEventListener("resize", () => {
+  clearMovement();
+  updateOrientationState();
+  resizeCharacters();
 });
 
 startButton.addEventListener("click", beginCountdown);
