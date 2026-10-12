@@ -96,8 +96,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("personalBestElement.textContent"), "自己ベスト：まだ記録がありません。");
     assert.equal(await evaluate("catSelectionElement.hidden"), false);
     assert.ok(await evaluate("[...document.querySelectorAll('.cat-details')].every(element => element.querySelectorAll('[role=listitem]').length === 3 && !element.textContent.includes('出現'))"));
-    assert.ok(await evaluate("document.querySelector('input[value=leche]').closest('label').textContent.includes('鰹節：7秒間スピード2倍')"));
-    assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('苺：5秒間スピード2倍')"));
+    assert.ok(await evaluate("document.querySelector('input[value=leche]').closest('label').textContent.includes('🐟：7秒間スピード2倍')"));
+    assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('🍓：5秒間スピード2倍')"));
     assert.equal(await evaluate("document.getElementById('account-title').hidden"), true);
     assert.equal(await evaluate("accountMessage.textContent"), `ログイン名：${usernames[0]}`);
     assert.ok(await evaluate("document.querySelector('.field-wrap').getClientRects().length > 0 && document.querySelector('.ranking').getClientRects().length > 0"));
