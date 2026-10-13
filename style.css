@@ -19,7 +19,7 @@ body {
 
 .game-card {
   min-width: 0;
-  width: min(100%, 980px);
+  width: 100%;
   padding: clamp(20px, 4vw, 38px);
   border: 3px solid #48426a;
   border-radius: 32px;
@@ -56,7 +56,15 @@ h1 { display: flex; align-items: center; gap: 8px; margin: 0; color: #6550b5; fo
 .title-cat { flex: none; width: 48px; height: 48px; object-fit: contain; }
 .intro { margin: 10px 0 0; color: #565877; font-size: 17px; line-height: 1.7; }
 
-.status { display: flex; flex: none; gap: 10px; }
+.status {
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 10px;
+  pointer-events: none;
+}
 .status-item {
   min-width: 104px;
   padding: 10px 14px;
@@ -112,9 +120,8 @@ h1 { display: flex; align-items: center; gap: 8px; margin: 0; color: #6550b5; fo
 .boost-status {
   position: absolute;
   z-index: 2;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 12px;
+  left: 12px;
   padding: 8px 14px;
   border-radius: 999px;
   background: #fff2bd;
@@ -237,8 +244,7 @@ body.mobile-play { overflow: hidden; padding: 0; }
   display: flex;
   flex-direction: column;
 }
-.mobile-play .game-header { flex: none; flex-direction: row; justify-content: flex-end; margin: 0 0 5px; padding: 0; border: 0; }
-.mobile-play .game-header > div:first-child,
+.mobile-play .game-header,
 .mobile-play .cat-selection,
 .mobile-play .instructions,
 .mobile-play .ranking,
@@ -270,7 +276,9 @@ kbd {
   .result-emoji { font-size: 34px; }
   .result-card button { padding: 10px 20px; }
   .game-header { align-items: stretch; flex-direction: column; }
-  .status-item { flex: 1; }
+  .status { top: 8px; right: 8px; gap: 8px; }
+  .status-item { min-width: 80px; padding: 6px 10px; border-radius: 12px; }
+  .status-item strong { font-size: 22px; }
   .instructions { line-height: 1.8; }
   .ranking { padding: 16px; }
   .ranking-header { flex-wrap: wrap; }

@@ -15,10 +15,6 @@
         <h1><img class="title-cat" src="images/leche.png" alt=""><span>レチェとラテ</span><img class="title-cat" src="images/latte.png" alt=""></h1>
         <p class="intro" data-game-only hidden>30秒で何ポイントとれるかな？ 通常のネズミは1P、3秒ごとに1匹増えるよ！ 残り10秒で、3倍速のブサイクネズミが登場！ 捕まえると5P！</p>
       </div>
-      <div class="status" aria-label="ゲームの記録" data-game-only hidden>
-        <div class="status-item"><span>スコア</span><strong><span id="score">0</span><small>P</small></strong></div>
-        <div class="status-item"><span>残り時間</span><strong><span id="time">30</span><small>秒</small></strong></div>
-      </div>
     </header>
 
     <div id="game-content" data-game-only hidden>
@@ -32,6 +28,10 @@
 
     <section class="field-wrap" aria-label="ゲーム画面">
       <div id="field" class="field">
+        <div class="status" aria-label="ゲームの記録" data-game-only hidden>
+          <div class="status-item"><span>スコア</span><strong><span id="score">0</span><small>P</small></strong></div>
+          <div class="status-item"><span>残り時間</span><strong><span id="time">30</span><small>秒</small></strong></div>
+        </div>
         <div id="touch-origin" class="touch-origin" hidden aria-hidden="true"></div>
         <div id="touch-stick" class="touch-stick" hidden aria-hidden="true"></div>
         <div id="boost-status" class="boost-status" hidden></div>
