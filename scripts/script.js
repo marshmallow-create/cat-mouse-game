@@ -10,6 +10,7 @@ const countdownNumberElement = document.getElementById("countdown-number");
 const gameOverElement = document.getElementById("game-over");
 const finalScoreElement = document.getElementById("final-score");
 const restartButton = document.getElementById("restart");
+const returnMenuButton = document.getElementById("return-menu");
 const boostStatusElement = document.getElementById("boost-status");
 const rankingBodyElement = document.getElementById("ranking-body");
 const rankingMessageElement = document.getElementById("ranking-message");
@@ -121,7 +122,8 @@ function updateAccountControls() {
   catSelectionElement.disabled = busy || !currentUser;
   startButton.disabled = authBusy || savingResults || !currentUser;
   restartButton.disabled = authBusy || savingResults || !currentUser;
-  const immersive = mobilePlay && (playing || countingDown);
+  const immersive = mobilePlay && !!currentUser && (playing || countingDown || !gameOverElement.hidden);
+  returnMenuButton.hidden = !immersive || gameOverElement.hidden;
   const changed = document.body.classList.contains("mobile-play") !== immersive;
   document.body.classList.toggle("mobile-play", immersive);
   updateOrientationState();
@@ -281,9 +283,17 @@ async function loadRankings() {
       const row = document.createElement("tr");
       if (result.id === lastSavedResultId) row.className = "current-result";
       const values = [`${index + 1}位`, result.username, `${result.score}P`, catTypes[result.cat_type]?.name || "不明", formatter.format(new Date(result.played_at))];
-      for (const value of values) {
+      for (const [column, value] of values.entries()) {
         const cell = document.createElement("td");
         cell.textContent = value;
+        if (column === 1 && index < 3) {
+          const crown = document.createElement("span");
+          crown.className = `ranking-crown ranking-crown-${["gold", "silver", "bronze"][index]}`;
+          crown.textContent = "👑";
+          crown.setAttribute("role", "img");
+          crown.setAttribute("aria-label", `${index + 1}位：${["金", "銀", "銅"][index]}の王冠`);
+          cell.appendChild(crown);
+        }
         row.appendChild(cell);
       }
       rankingBodyElement.appendChild(row);
@@ -428,10 +438,10 @@ function updateBoostStatus(now) {
   boostStatusElement.textContent = stunned
     ? "リクに触れた！ 1秒間動けない！"
     : active
-      ? `${rikuActive ? "リク：" : momoStrawberryActive ? "👦 モモ＋🍓" : playCat.emoji} スピード${rikuActive ? 3 : momoStrawberryActive ? 4 : playCat.boostMultiplier}倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
+      ? `${rikuActive ? "リク：" : momoStrawberryActive ? "👦 モモ＋🍓" : playCat.emoji} スピード${rikuActive ? 3 : momoStrawberryActive ? 5 : playCat.boostMultiplier}倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
       : "";
   if (doublePoints) boostStatusElement.textContent += `${boostStatusElement.textContent ? " ／ " : ""}👦 モモ：ポイント2倍！ あと${Math.ceil((momoPointsUntil - now) / 1000)}秒`;
-  if (now < momoStrawberryUntil && !momoStrawberryActive) boostStatusElement.textContent += `${boostStatusElement.textContent ? " ／ " : ""}👦 モモ：🍓を取るとスピード4倍！ あと${Math.ceil((momoStrawberryUntil - now) / 1000)}秒`;
+  if (now < momoStrawberryUntil && !momoStrawberryActive) boostStatusElement.textContent += `${boostStatusElement.textContent ? " ／ " : ""}👦 モモ：🍓を取るとスピード5倍！ あと${Math.ceil((momoStrawberryUntil - now) / 1000)}秒`;
 }
 
 function resetRiku() {
@@ -632,7 +642,7 @@ function endGame() {
   resultCatElement.src = playCat.image;
   gameOverElement.hidden = false;
   updateAccountControls();
-  restartButton.focus();
+  restartButton.focus({ preventScroll: true });
   // スコアをコピーしてから送信し、再挑戦のリセットに影響されないようにします。
   if (!currentUser || currentUser.id !== playUserId) return;
   pendingResults.push({ playId: currentPlayId, score, catType: Object.keys(catTypes).find(key => catTypes[key] === playCat) });
@@ -675,7 +685,7 @@ function update(now) {
         - Number(directionHeld("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
       const catSpeed = now < stunUntil ? 0
-        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < rikuBoostUntil ? 3 : now < boostUntil ? now < momoStrawberryUntil ? 4 : playCat.boostMultiplier : 1);
+        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < rikuBoostUntil ? 3 : now < boostUntil ? now < momoStrawberryUntil ? 5 : playCat.boostMultiplier : 1);
 
       cat.x = clamp(cat.x + horizontal / length * catSpeed * seconds, catArea.minX, catArea.maxX);
       cat.y = clamp(cat.y + vertical / length * catSpeed * seconds, catArea.minY, catArea.maxY);
@@ -824,6 +834,11 @@ window.addEventListener("resize", () => {
 
 startButton.addEventListener("click", beginCountdown);
 restartButton.addEventListener("click", beginCountdown);
+returnMenuButton.addEventListener("click", () => {
+  mobilePlay = false;
+  updateAccountControls();
+  catSelectionElement.scrollIntoView({ block: "start" });
+});
 refreshRankingButton.addEventListener("click", loadRankings);
 retrySaveButton.addEventListener("click", savePendingResults);
 updateCatPreview();

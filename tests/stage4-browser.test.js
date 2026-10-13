@@ -95,7 +95,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("personalBestElement.hidden"), false);
     assert.equal(await evaluate("personalBestElement.textContent"), "自己ベスト：まだ記録がありません。");
     assert.equal(await evaluate("catSelectionElement.hidden"), false);
-    assert.ok(await evaluate("[...document.querySelectorAll('.cat-details')].every(element => element.querySelectorAll('[role=listitem]').length === 3 && !element.textContent.includes('出現'))"));
+    assert.ok(await evaluate("[...document.querySelectorAll('.cat-details')].every(element => element.querySelectorAll('[role=listitem]').length === 4 && !element.textContent.includes('出現'))"));
     assert.ok(await evaluate("document.querySelector('input[value=leche]').closest('label').textContent.includes('🐟：7秒間スピード2倍')"));
     assert.ok(await evaluate("document.querySelector('input[value=latte]').closest('label').textContent.includes('🍓：5秒間スピード2.5倍')"));
     assert.equal(await evaluate("document.getElementById('account-title').hidden"), true);
@@ -129,8 +129,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("pendingResults.length"), 1);
     assert.equal(await evaluate("selectedCat"), "leche");
     assert.equal(await evaluate("timeElement.textContent"), "0");
-    assert.equal(await evaluate("mice.filter(mouse => !mouse.special).length"), 10);
-    assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 1);
+    assert.equal(await evaluate("mice.filter(mouse => !mouse.special).length"), 15);
+    assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 2);
     assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/leche.png");
     assert.equal(await evaluate("catSelectionElement.disabled"), false);
     await evaluate("document.querySelector('input[value=latte]').click()");
@@ -191,8 +191,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     const beforeNormal = await evaluate("const normal = mice.find(mouse => !mouse.special); cat.x = normal.x; cat.y = normal.y; for (const mouse of mice.filter(mouse => mouse !== normal)) { mouse.x = bounds().minX; mouse.y = bounds().minY; } score");
     await poll(() => evaluate(`score === ${beforeNormal + 1}`));
     await evaluate("startTime = performance.now() - 27001");
-    await poll(() => evaluate("mice.filter(mouse => !mouse.special).length === 10"));
-    assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 1);
+    await poll(() => evaluate("mice.filter(mouse => !mouse.special).length === 14"));
+    assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 2);
     await evaluate("score = 7; startTime = performance.now() - 30001");
     await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7P（使用した猫：）'"));
     assert.equal(await evaluate("personalBestElement.querySelector('img').getAttribute('src')"), "images/latte.png");
@@ -228,7 +228,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("rankingBodyElement.children.length"), 0);
     assert.ok(await evaluate("personalBestElement.textContent.includes('取得できませんでした')"));
     await cdp("Page.reload");
-    await poll(() => evaluate(`currentUser?.id === ${bobId} && !authBusy`));
+    await poll(() => evaluate(`typeof currentUser !== 'undefined' && currentUser?.id === ${bobId} && !authBusy`));
     assert.equal(await evaluate("pendingResults.length"), 0);
     await evaluate("logoutButton.click()");
     await poll(() => evaluate("currentUser === null && !authBusy"));
@@ -285,14 +285,27 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.ok(await evaluate("boostUntil - performance.now() > 4500"));
     const landscapeScreenshot = await cdp("Page.captureScreenshot", { format: "png" });
     fs.writeFileSync(path.join(root, ".local", "landscape-touch-preview.png"), Buffer.from(landscapeScreenshot.data, "base64"));
+    const scrollBeforeEnd = await evaluate("scrollY");
     await evaluate("startTime = performance.now() - 30001");
     await poll(() => evaluate("!playing && !savingResults"));
-    assert.ok(await evaluate("document.querySelector('.ranking').getClientRects().length > 0 && document.querySelector('.account').getClientRects().length > 0"));
+    assert.equal(await evaluate("document.body.classList.contains('mobile-play')"), true);
+    assert.ok(await evaluate("document.querySelector('.ranking').getClientRects().length === 0 && document.querySelector('.account').getClientRects().length === 0"));
+    assert.ok(await evaluate("(() => { const area=field.getBoundingClientRect(); const card=gameOverElement.querySelector('.result-card').getBoundingClientRect(); return area.top >= 0 && area.bottom <= innerHeight && card.top >= area.top && card.bottom <= area.bottom && card.left >= area.left && card.right <= area.right; })()"));
+    assert.equal(await evaluate("scrollY"), scrollBeforeEnd);
+    // 高さの小さい横画面でも、長い保存エラーとボタンはカード内に収める。
+    await cdp("Emulation.setDeviceMetricsOverride", { width: 667, height: 280, deviceScaleFactor: 1, mobile: true });
+    await evaluate("resultSaveMessageElement.textContent = '保存できませんでした。接続を確認し、猫の選択・ランキング画面から保存を再試行してください。'.repeat(3)");
+    assert.ok(await evaluate("(() => { const area=field.getBoundingClientRect(); const card=gameOverElement.querySelector('.result-card'); const rect=card.getBoundingClientRect(); card.scrollTop=card.scrollHeight; const button=returnMenuButton.getBoundingClientRect(); return rect.top >= area.top && rect.bottom <= area.bottom && button.top >= rect.top && button.bottom <= rect.bottom; })()"));
+    await evaluate("resultSaveMessageElement.textContent = '記録を保存しました！'; gameOverElement.querySelector('.result-card').scrollTop = 0");
+    await cdp("Emulation.setDeviceMetricsOverride", { width: 844, height: 390, deviceScaleFactor: 1, mobile: true });
     await cdp("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     assert.ok(await evaluate("(() => { const button=restartButton.getBoundingClientRect(); const area=field.getBoundingClientRect(); return button.bottom <= area.bottom && button.top >= area.top; })()"));
     assert.deepEqual(errors, []);
     const mobileScreenshot = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
     fs.writeFileSync(path.join(root, ".local", "stage5-mobile-preview.png"), Buffer.from(mobileScreenshot.data, "base64"));
+    await evaluate("returnMenuButton.click()");
+    assert.equal(await evaluate("document.body.classList.contains('mobile-play')"), false);
+    assert.ok(await evaluate("document.querySelector('.ranking').getClientRects().length > 0 && document.querySelector('.account').getClientRects().length > 0"));
     await cdp("Emulation.clearDeviceMetricsOverride");
     // レビュー用のスクリーンショット。
     const screenshot = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });

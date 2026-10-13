@@ -261,8 +261,8 @@ test("Latte adds one strawberry per contact and enhances only an active strawber
     momoFrame(context, 15040);
     assert.equal(context.strawberries.length, 1);
     assert.equal(context.momoStrawberryUntil, 18020);
-    assert.ok(Math.abs(context.cat.x - (300 + 270 * 1.2 * scale * 4 * 0.02)) < 1e-10);
-    assert.match(context.boostStatusElement.textContent, /スピード4倍/);
+    assert.ok(Math.abs(context.cat.x - (300 + 270 * 1.2 * scale * 5 * 0.02)) < 1e-10);
+    assert.match(context.boostStatusElement.textContent, /スピード5倍/);
     context.cat.x = 300;
     momoFrame(context, 18020);
     assert.ok(Math.abs(context.cat.x - (300 + 270 * 1.2 * scale * 2.5 * 0.02)) < 1e-10);
@@ -278,7 +278,7 @@ test("Latte adds one strawberry per contact and enhances only an active strawber
     momoFrame(context, 18050);
     assert.equal(context.strawberries.length, 1);
     assert.equal(context.boostUntil, 23050);
-    assert.match(context.boostStatusElement.textContent, /スピード4倍/);
+    assert.match(context.boostStatusElement.textContent, /スピード5倍/);
   }
 });
 

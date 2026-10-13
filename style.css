@@ -220,6 +220,9 @@ button:disabled { opacity: .65; cursor: wait; }
 .ranking-table td:nth-child(2) { overflow-wrap: anywhere; }
 .ranking-table th, .ranking-table td:first-child, .ranking-table td:nth-child(3), .ranking-table td:nth-child(4), .ranking-table td:last-child { white-space: nowrap; }
 .ranking-table .current-result { background: #304466; font-weight: 700; }
+.ranking-crown { display: inline-block; margin-left: 6px; font-size: 1.2em; vertical-align: middle; }
+.ranking-crown-silver { filter: grayscale(1); }
+.ranking-crown-bronze { filter: sepia(1) saturate(1.5) brightness(.75); }
 
 .instructions { margin: 19px 0 0; text-align: center; font-size: 14px; font-weight: 700; }
 .touch-instructions { display: none; }
@@ -276,6 +279,24 @@ body.mobile-play { overflow: hidden; padding: 0; }
 .mobile-play #game-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .mobile-play .field-wrap { flex: 1; min-height: 0; padding: 4px; border-radius: 15px; box-shadow: none; }
 .mobile-play .field { height: 100%; min-height: 0; aspect-ratio: auto; border-radius: 12px; }
+.mobile-play .overlay { padding: 10px; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+.mobile-play #game-over { z-index: 5; }
+.mobile-play .result-card {
+  min-height: 0;
+  max-height: 100%;
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 18px;
+  box-shadow: 3px 3px 0 #6476aa;
+}
+.mobile-play .result-emoji { font-size: 30px; line-height: 1; }
+.mobile-play .result-cat { width: 40px; height: 40px; }
+.mobile-play .result-card h2 { margin: 4px 0; font-size: 22px; }
+.mobile-play .result-card p { margin-bottom: 8px; }
+.mobile-play .result-card .save-message { margin-bottom: 8px; overflow-wrap: anywhere; }
+.mobile-play .result-card button { padding: 8px 18px; }
+.mobile-play #return-menu { display: block; margin: 10px auto 3px; }
 kbd {
   display: inline-block;
   min-width: 22px;
