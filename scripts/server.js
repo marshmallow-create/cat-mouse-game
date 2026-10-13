@@ -34,6 +34,7 @@ const files = new Map([
   ["/images/mouse.png", { name: "images/mouse.png", type: "image/png" }],
   ["/images/mouse-busaiku.png", { name: "images/mouse-busaiku.png", type: "image/png" }],
   ["/images/riku.png", { name: "images/riku.png", type: "image/png" }],
+  ["/images/momo.png", { name: "images/momo.png", type: "image/png" }],
   ["/images/alley.png", { name: "images/alley.png", type: "image/png" }]
 ]);
 

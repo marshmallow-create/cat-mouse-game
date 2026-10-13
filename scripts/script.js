@@ -45,12 +45,12 @@ for (const choice of catChoices) {
 
 const GAME_LENGTH = 30; // 秒
 const COUNTDOWN_LENGTH = 3000; // ミリ秒
-const MOUSE_SPAWN_INTERVAL = 3000; // ミリ秒
+const MOUSE_SPAWN_INTERVAL = 2000; // ミリ秒
 const STRAWBERRY_SPAWN_INTERVAL = 5000;
 const STRAWBERRY_RADIUS = 22;
 const CAT_SPEED = 270; // 1秒に進むピクセル数
 const MOUSE_SPEED = 115;
-const SPECIAL_MOUSE_REMAINING = 10; // 残り秒数
+const SPECIAL_MOUSE_REMAINING = [10, 5]; // 1匹ずつ追加する残り秒数
 const CHARACTER_RADIUS = 27;
 const CAT_RADIUS = 36;
 const PICKUP_DISTANCE = CAT_RADIUS + STRAWBERRY_RADIUS;
@@ -61,6 +61,11 @@ const RIKU_SPEED = 150;
 const RIKU_RADIUS = 36;
 const RIKU_CONTACT_DISTANCE = CAT_RADIUS + RIKU_RADIUS;
 const RIKU_EFFECT_DURATION = 1000;
+const MOMO_SPAWN_TIME = (GAME_LENGTH - 15) * 1000;
+const MOMO_SPEED = 150;
+const MOMO_RADIUS = 36;
+const MOMO_CONTACT_DISTANCE = CAT_RADIUS + MOMO_RADIUS;
+const MOMO_EFFECT_DURATION = 3000;
 
 const keys = new Set();
 const directionHeld = key => keys.has(key);
@@ -80,6 +85,9 @@ let boostUntil = 0;
 let riku = null;
 let rikuBoostUntil = 0;
 let stunUntil = 0;
+let momo = null;
+let momoPointsUntil = 0;
+let momoStrawberryUntil = 0;
 let score = 0;
 let startTime = 0;
 let previousTime = 0;
@@ -136,6 +144,9 @@ function updateOrientationState() {
     if (rikuBoostUntil) rikuBoostUntil += duration;
     if (stunUntil) stunUntil += duration;
     if (riku) riku.lastDirectionTime += duration;
+    if (momoPointsUntil) momoPointsUntil += duration;
+    if (momoStrawberryUntil) momoStrawberryUntil += duration;
+    if (momo) momo.lastDirectionTime += duration;
     previousTime = now;
     orientationPausedAt = null;
   }
@@ -368,6 +379,10 @@ function bounds(radius = CHARACTER_RADIUS) {
 function draw() {
   catElement.style.left = `${cat.x}px`;
   catElement.style.top = `${cat.y}px`;
+  if (momo) {
+    momo.element.style.left = `${momo.x}px`;
+    momo.element.style.top = `${momo.y}px`;
+  }
   if (riku) {
     riku.element.style.left = `${riku.x}px`;
     riku.element.style.top = `${riku.y}px`;
@@ -402,17 +417,21 @@ function addStrawberry() {
 
 function updateBoostStatus(now) {
   const rikuActive = now < rikuBoostUntil;
-  const effectUntil = rikuActive ? rikuBoostUntil : boostUntil;
+  const momoStrawberryActive = now < momoStrawberryUntil && now < boostUntil;
+  const effectUntil = rikuActive ? rikuBoostUntil : momoStrawberryActive ? Math.min(momoStrawberryUntil, boostUntil) : boostUntil;
   const active = now < effectUntil;
   const stunned = now < stunUntil;
   catElement.classList.toggle("boosted", active);
   catElement.classList.toggle("stunned", stunned);
-  boostStatusElement.hidden = !active && !stunned;
+  const doublePoints = now < momoPointsUntil;
+  boostStatusElement.hidden = !active && !stunned && !doublePoints && now >= momoStrawberryUntil;
   boostStatusElement.textContent = stunned
     ? "リクに触れた！ 1秒間動けない！"
     : active
-      ? `${rikuActive ? "リク：" : playCat.emoji} スピード${rikuActive ? 3 : playCat.boostMultiplier}倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
+      ? `${rikuActive ? "リク：" : momoStrawberryActive ? "👦 モモ＋🍓" : playCat.emoji} スピード${rikuActive ? 3 : momoStrawberryActive ? 4 : playCat.boostMultiplier}倍！ あと${Math.ceil((effectUntil - now) / 1000)}秒`
       : "";
+  if (doublePoints) boostStatusElement.textContent += `${boostStatusElement.textContent ? " ／ " : ""}👦 モモ：ポイント2倍！ あと${Math.ceil((momoPointsUntil - now) / 1000)}秒`;
+  if (now < momoStrawberryUntil && !momoStrawberryActive) boostStatusElement.textContent += `${boostStatusElement.textContent ? " ／ " : ""}👦 モモ：🍓を取るとスピード4倍！ あと${Math.ceil((momoStrawberryUntil - now) / 1000)}秒`;
 }
 
 function resetRiku() {
@@ -460,6 +479,49 @@ function resetStrawberries() {
   spawnedStrawberryCount = 0;
   boostUntil = 0;
   updateBoostStatus(0);
+}
+
+function resetMomo() {
+  if (momo) momo.element.remove();
+  momo = null;
+  momoPointsUntil = 0;
+  momoStrawberryUntil = 0;
+  updateBoostStatus(0);
+}
+
+function updateMomo(now, seconds) {
+  if (!momo && now - startTime >= MOMO_SPAWN_TIME) {
+    const element = document.createElement("img");
+    element.className = "character momo";
+    element.src = "images/momo.png";
+    element.alt = "モモ";
+    element.draggable = false;
+    momo = { element, x: 0, y: 0, dx: 0, dy: 0, touching: false, lastDirectionTime: now };
+    placeMouse(momo, MOMO_RADIUS);
+    field.appendChild(element);
+  }
+  if (!momo) return;
+  if (now - momo.lastDirectionTime >= DIRECTION_INTERVAL) {
+    chooseMouseDirection(momo);
+    momo.lastDirectionTime = now;
+  }
+  const area = bounds(MOMO_RADIUS);
+  momo.x += momo.dx * MOMO_SPEED * characterScale * seconds;
+  momo.y += momo.dy * MOMO_SPEED * characterScale * seconds;
+  if (momo.x < area.minX || momo.x > area.maxX) momo.dx *= -1;
+  if (momo.y < area.minY || momo.y > area.maxY) momo.dy *= -1;
+  momo.x = clamp(momo.x, area.minX, area.maxX);
+  momo.y = clamp(momo.y, area.minY, area.maxY);
+  const touching = Math.hypot(cat.x - momo.x, cat.y - momo.y) < MOMO_CONTACT_DISTANCE * characterScale;
+  // 離れて再び触れたときに、新しい接触として効果を発動する。
+  if (touching && !momo.touching) {
+    if (playCat === catTypes.leche) momoPointsUntil = now + MOMO_EFFECT_DURATION;
+    else {
+      momoStrawberryUntil = now + MOMO_EFFECT_DURATION;
+      addStrawberry();
+    }
+  }
+  momo.touching = touching;
 }
 
 function chooseMouseDirection(mouse) {
@@ -527,6 +589,7 @@ async function beginCountdown() {
   currentPlayId = crypto.randomUUID();
   resultSaveMessageElement.textContent = "";
   resetRiku();
+  resetMomo();
   resetStrawberries();
   placeCharacters();
   score = 0;
@@ -561,6 +624,7 @@ function endGame() {
   if (!playing) return;
   playing = false;
   resetRiku();
+  resetMomo();
   resetStrawberries();
   clearMovement();
   timeElement.textContent = "0";
@@ -602,6 +666,7 @@ function update(now) {
       // フレーム間の秒数を使うと、PCの描画速度が違っても同じ速さで動く。
       const seconds = Math.min((now - previousTime) / 1000, 0.05);
       updateRiku(now, seconds);
+      updateMomo(now, seconds);
       const area = bounds();
       const catArea = bounds(CAT_RADIUS);
       const horizontal = touch.pointerId !== null ? touch.dx : Number(directionHeld("arrowright") || keys.has("d"))
@@ -610,7 +675,7 @@ function update(now) {
         - Number(directionHeld("arrowup") || keys.has("w"));
       const length = Math.hypot(horizontal, vertical) || 1;
       const catSpeed = now < stunUntil ? 0
-        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < rikuBoostUntil ? 3 : now < boostUntil ? playCat.boostMultiplier : 1);
+        : CAT_SPEED * playCat.speedMultiplier * characterScale * (now < rikuBoostUntil ? 3 : now < boostUntil ? now < momoStrawberryUntil ? 4 : playCat.boostMultiplier : 1);
 
       cat.x = clamp(cat.x + horizontal / length * catSpeed * seconds, catArea.minX, catArea.maxX);
       cat.y = clamp(cat.y + vertical / length * catSpeed * seconds, catArea.minY, catArea.maxY);
@@ -631,14 +696,19 @@ function update(now) {
       }
       updateBoostStatus(now);
 
-      // 開始から3秒ごとにネズミを1匹追加する。
+      // 開始から2秒ごとに通常のネズミを1匹追加する。
       const targetMouseCount = 1 + Math.floor((now - startTime) / MOUSE_SPAWN_INTERVAL);
       let normalMouseCount = mice.filter(mouse => !mouse.special).length;
       while (normalMouseCount < targetMouseCount) {
         addMouse();
         normalMouseCount++;
       }
-      if (remaining <= SPECIAL_MOUSE_REMAINING && !mice.some(mouse => mouse.special)) addMouse(true);
+      const targetSpecialMouseCount = SPECIAL_MOUSE_REMAINING.filter(seconds => remaining <= seconds).length;
+      let specialMouseCount = mice.filter(mouse => mouse.special).length;
+      while (specialMouseCount < targetSpecialMouseCount) {
+        addMouse(true);
+        specialMouseCount++;
+      }
 
       if (now - lastDirectionTime >= DIRECTION_INTERVAL) {
         for (const mouse of mice) chooseMouseDirection(mouse);
@@ -655,7 +725,7 @@ function update(now) {
         mouse.y = clamp(mouse.y, area.minY, area.maxY);
 
         if (Math.hypot(cat.x - mouse.x, cat.y - mouse.y) < CATCH_DISTANCE * characterScale) {
-          score += mouse.points;
+          score += mouse.points * (now < momoPointsUntil ? 2 : 1);
           scoreElement.textContent = String(score);
           placeMouse(mouse);
         }
@@ -725,6 +795,11 @@ function resizeCharacters() {
   const catArea = bounds(CAT_RADIUS);
   cat.x = clamp(cat.x, catArea.minX, catArea.maxX);
   cat.y = clamp(cat.y, catArea.minY, catArea.maxY);
+  if (momo) {
+    const momoArea = bounds(MOMO_RADIUS);
+    momo.x = clamp(momo.x, momoArea.minX, momoArea.maxX);
+    momo.y = clamp(momo.y, momoArea.minY, momoArea.maxY);
+  }
   if (riku) {
     const rikuArea = bounds(RIKU_RADIUS);
     riku.x = clamp(riku.x, rikuArea.minX, rikuArea.maxX);
