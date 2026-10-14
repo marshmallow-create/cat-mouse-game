@@ -135,7 +135,7 @@ h1 { display: flex; align-items: center; gap: 8px; margin: 0; color: #bbc6ff; fo
 .special-mouse { object-fit: contain; }
 .strawberry { width: calc(44px * var(--character-scale, 1)); height: calc(44px * var(--character-scale, 1)); font-size: calc(36px * var(--character-scale, 1)); }
 .cat.boosted { filter: drop-shadow(0 0 8px #ffe46b) drop-shadow(0 0 16px #ffb52e); }
-.riku, .momo { width: calc(72px * var(--character-scale, 1)); height: calc(72px * var(--character-scale, 1)); object-fit: contain; }
+.riku, .momo, .parent { width: calc(72px * var(--character-scale, 1)); height: calc(72px * var(--character-scale, 1)); object-fit: contain; }
 .cat.stunned { filter: grayscale(0.8) drop-shadow(0 0 8px #bbc6ff); }
 .boost-status {
   position: absolute;

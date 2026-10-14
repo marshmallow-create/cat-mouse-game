@@ -110,6 +110,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await cdp("Network.setBlockedURLs", { urls: ["*/api/results"] });
     await evaluate("startButton.click()");
     await poll(() => evaluate("playing"));
+    // 保存・再送テストでは親の接触効果を分離し、別のテストで確認する。
+    await evaluate("updateParents = () => false");
     assert.equal(await evaluate("catSelectionElement.disabled"), true);
     await evaluate("document.querySelector('input[value=latte]').click()");
     assert.equal(await evaluate("selectedCat"), "leche");
@@ -155,6 +157,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("document.querySelector('input[value=latte]').click()");
     await evaluate("startButton.click()");
     await poll(() => evaluate("playing"));
+    await evaluate("updateParents = () => false");
     assert.equal(await evaluate("catElement.getAttribute('src')"), "images/latte.png");
     assert.equal(await evaluate("mice.some(mouse => mouse.special)"), false);
     await evaluate("startTime -= 5100");
@@ -186,6 +189,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.ok(movement.distance > 0);
     assert.ok(Math.abs(movement.distance - movement.expected) < 0.001);
     // 捕獲で5P加点。通常ネズミの加点は1P。
+    await evaluate("resetRiku(); resetMomo(); updateRiku = () => {}; updateMomo = () => {}");
     const beforeSpecial = await evaluate("for (const mouse of mice.filter(mouse => !mouse.special)) { mouse.x = bounds().maxX; mouse.y = bounds().maxY; } const special = mice.find(mouse => mouse.special); cat.x = special.x; cat.y = special.y; score");
     await poll(() => evaluate(`score === ${beforeSpecial + 5}`));
     const beforeNormal = await evaluate("const normal = mice.find(mouse => !mouse.special); cat.x = normal.x; cat.y = normal.y; for (const mouse of mice.filter(mouse => mouse !== normal)) { mouse.x = bounds().minX; mouse.y = bounds().minY; } score");
@@ -194,7 +198,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await poll(() => evaluate("mice.filter(mouse => !mouse.special).length === 14"));
     assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 2);
     await evaluate("score = 7; startTime = performance.now() - 30001");
-    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7P（使用した猫：）'"));
+    await poll(() => evaluate("!playing && !savingResults && personalBestElement.textContent === '自己ベスト：7P'"));
     assert.equal(await evaluate("personalBestElement.querySelector('img').getAttribute('src')"), "images/latte.png");
     assert.equal(await evaluate("personalBestElement.querySelector('img').alt"), "ラテ");
     assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'ラテ')"));
@@ -207,7 +211,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // テキスト入力上のゲームキーはpreventDefaultしない。
     assert.equal(await evaluate("const input = document.getElementById('username'); const event = new KeyboardEvent('keydown', {key:'a', bubbles:true, cancelable:true}); input.dispatchEvent(event); event.defaultPrevented"), false);
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}P（使用した猫：）'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${aliceScore}P'`));
     assert.equal(await evaluate("personalBestElement.querySelector('img').getAttribute('src')"), "images/leche.png");
     assert.equal(await evaluate("personalBestElement.querySelector('img').alt"), "レチェ");
     assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'レチェ')"));
@@ -218,6 +222,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     // 別タブでBへログインした状況：Cookieだけ変わり、Aのゲーム画面は残る。
     await evaluate("startButton.click()");
     await poll(() => evaluate("playing"));
+    await evaluate("updateParents = () => false");
     assert.equal(await evaluate("mice.some(mouse => mouse.special)"), false);
     assert.equal(await evaluate(`(async () => (await fetch('/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:${JSON.stringify(usernames[1])},password:'browser-password-12345'})})).status)()`), 200);
     await evaluate("score = 9; startTime = performance.now() - 30001");
@@ -233,7 +238,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     await evaluate("logoutButton.click()");
     await poll(() => evaluate("currentUser === null && !authBusy"));
     await signIn(usernames[0], false);
-    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}P（使用した猫：）'`));
+    await poll(() => evaluate(`pendingResults.length === 0 && personalBestElement.textContent === '自己ベスト：${Math.max(aliceScore, 9)}P'`));
     assert.equal(await evaluate("personalBestElement.querySelector('img').alt"), aliceScore > 9 ? "レチェ" : "ラテ");
     assert.equal((await admin.query("SELECT count(*) FROM game_results WHERE user_id = $1", [aliceId])).rows[0].count, "2");
     assert.deepEqual(errors, []);
@@ -250,6 +255,7 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("playing"), false);
     await cdp("Emulation.setDeviceMetricsOverride", { width: 844, height: 390, deviceScaleFactor: 1, mobile: true });
     await poll(() => evaluate("playing"));
+    await evaluate("updateParents = () => false");
     assert.equal(await evaluate("rotateGuide.hidden"), true);
     assert.ok(await evaluate("(() => { const rect=field.getBoundingClientRect(); return rect.width > innerWidth * .9 && rect.height > innerHeight * .8 && rect.bottom <= innerHeight; })()"));
     assert.equal(await evaluate("document.querySelector('.ranking').getClientRects().length"), 0);

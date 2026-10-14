@@ -23,7 +23,7 @@ test("playable cat, Riku and Momo images are served as PNG files", { timeout: 10
       once(server, "exit").then(() => { throw new Error("Server exited before startup"); })
     ]);
     server.stdout.resume();
-    for (const cat of ["leche", "latte", "riku", "momo", "mouse-busaiku"]) {
+    for (const cat of ["leche", "latte", "riku", "momo", "mama", "papa", "mouse-busaiku"]) {
       const response = await fetch(`http://127.0.0.1:${port}/images/${cat}.png`);
       assert.equal(response.status, 200);
       assert.equal(response.headers.get("content-type"), "image/png");
