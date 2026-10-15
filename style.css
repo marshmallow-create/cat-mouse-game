@@ -72,6 +72,11 @@ h1 {
 .title-characters:first-child { justify-content: flex-end; }
 .title-characters img { flex: none; width: clamp(20px, 4vw, 48px); height: clamp(20px, 4vw, 48px); object-fit: contain; }
 .intro { margin: 10px 0 0; color: #c0cbea; font-size: 17px; line-height: 1.7; }
+.intro-lead { margin: 0; }
+.intro-rules { margin: 8px 0 0; padding-left: 1.5em; }
+.intro-rules li + li { margin-top: 6px; }
+.intro-rules li::marker { color: #bbc6ff; }
+.intro-rules strong { color: #edf2ff; }
 
 .status {
   position: absolute;
@@ -135,6 +140,67 @@ h1 {
 .strawberry { width: calc(44px * var(--character-scale, 1)); height: calc(44px * var(--character-scale, 1)); font-size: calc(36px * var(--character-scale, 1)); }
 .cat.boosted { filter: drop-shadow(0 0 8px #ffe46b) drop-shadow(0 0 16px #ffb52e); }
 .riku, .momo, .parent { width: calc(72px * var(--character-scale, 1)); height: calc(72px * var(--character-scale, 1)); object-fit: contain; }
+.parent.mama {
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 18% 26%, #fffef1 0 2%, transparent 5%),
+    radial-gradient(ellipse at 82% 38%, #fffef1 0 2%, transparent 5%),
+    radial-gradient(ellipse at 65% 83%, #fff5bd 0 2%, transparent 5%),
+    radial-gradient(ellipse, #fffbea80 15%, #ffe7a838 48%, transparent 72%);
+  animation: mama-light 2.4s ease-in-out infinite alternate;
+}
+
+.parent.papa {
+  border-radius: 45%;
+  background:
+    radial-gradient(ellipse at 24% 72%, #fff2a6 0 5%, #ffb52ecc 14%, #ff521c99 25%, transparent 42%),
+    radial-gradient(ellipse at 76% 64%, #ffe99c 0 5%, #ff962bcc 15%, #ef371c99 26%, transparent 43%),
+    radial-gradient(ellipse at 50% 85%, #ffe7a6 0 12%, #ff7b25bb 30%, transparent 63%);
+  background-repeat: no-repeat;
+  animation: papa-flames .65s ease-in-out infinite alternate;
+}
+
+@keyframes mama-light {
+  from {
+    filter: drop-shadow(0 0 calc(5px * var(--character-scale, 1)) #fffef0)
+      drop-shadow(0 0 calc(12px * var(--character-scale, 1)) #ffe6a0);
+    background-size: 100% 100%;
+  }
+  to {
+    filter: drop-shadow(0 0 calc(9px * var(--character-scale, 1)) #fffef0)
+      drop-shadow(0 0 calc(22px * var(--character-scale, 1)) #ffe6a0);
+    background-size: 108% 108%;
+  }
+}
+
+@keyframes papa-flames {
+  0% {
+    filter: drop-shadow(0 calc(-3px * var(--character-scale, 1)) calc(4px * var(--character-scale, 1)) #ffe588)
+      drop-shadow(0 calc(-7px * var(--character-scale, 1)) calc(8px * var(--character-scale, 1)) #ff8a24)
+      drop-shadow(0 calc(-12px * var(--character-scale, 1)) calc(12px * var(--character-scale, 1)) #ef3d20);
+    background-size: 100% 100%, 100% 90%, 100% 100%;
+  }
+  50% {
+    background-size: 100% 115%, 100% 105%, 100% 100%;
+  }
+  100% {
+    filter: drop-shadow(0 calc(-4px * var(--character-scale, 1)) calc(5px * var(--character-scale, 1)) #fff0a3)
+      drop-shadow(0 calc(-11px * var(--character-scale, 1)) calc(9px * var(--character-scale, 1)) #ff9b24)
+      drop-shadow(0 calc(-19px * var(--character-scale, 1)) calc(14px * var(--character-scale, 1)) #f54c20);
+    background-size: 100% 95%, 100% 120%, 100% 110%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parent.mama {
+    animation: none;
+    filter: drop-shadow(0 0 6px #fffef0) drop-shadow(0 0 14px #ffe6a0);
+  }
+  .parent.papa {
+    animation: none;
+    filter: drop-shadow(0 -3px 4px #ffe588) drop-shadow(0 -8px 10px #ff8a24) drop-shadow(0 -14px 14px #ef3d20);
+  }
+}
 .cat.stunned { filter: grayscale(0.8) drop-shadow(0 0 8px #bbc6ff); }
 .boost-status {
   position: absolute;
