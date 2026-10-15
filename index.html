@@ -13,7 +13,7 @@
       <div>
         <p class="eyebrow">どんどん捕まえよう！</p>
         <h1><img class="title-cat" src="images/leche.png" alt=""><span>レチェとラテ</span><img class="title-cat" src="images/latte.png" alt=""></h1>
-        <p class="intro" data-game-only hidden>30秒で何ポイントとれるかな？ 通常のネズミは1P、2秒ごとに1匹増えるよ！ 残り10秒と残り5秒で、3倍速のブサイクネズミが1匹ずつ登場！ 捕まえると5P！ 残り20秒で<img class="effect-icon" src="images/riku.png" alt="">リクと<img class="effect-icon" src="images/momo.png" alt="">モモが登場し、ランダムに動くよ！ 残り10秒で<img class="effect-icon" src="images/mama.png" alt="">ママと<img class="effect-icon" src="images/papa.png" alt="">パパも登場！ ママはレチェの0.5倍速、パパは2倍速でランダムに動くよ。ママに触れると残り時間が5秒増え、レチェなら🐟、ラテなら🍓が3つ出現。パパに触れるとその場でゲーム終了！</p>
+        <p class="intro" data-game-only hidden>30秒で何ポイントとれるかな？ 通常のネズミは1P、2秒ごとに1匹増えるよ（最大20匹）！ 残り10秒と残り5秒で、3倍速のブサイクネズミが1匹ずつ登場！ 捕まえると5P！ 残り20秒で<img class="effect-icon" src="images/riku.png" alt="">リクと<img class="effect-icon" src="images/momo.png" alt="">モモが登場し、ランダムに動くよ！ 残り10秒で<img class="effect-icon" src="images/mama.png" alt="">ママと<img class="effect-icon" src="images/papa.png" alt="">パパも登場！ ママはレチェの0.5倍速、パパは2倍速でランダムに動くよ。ママに触れると残り時間が3秒増え、レチェなら🐟、ラテなら🍓が3つ出現。パパに触れるとその場でゲーム終了！</p>
       </div>
     </header>
 
@@ -21,8 +21,8 @@
     <fieldset id="cat-selection" class="cat-selection" hidden>
       <legend>どちらの猫で遊ぶ？</legend>
       <div class="cat-options">
-        <label class="cat-option"><input type="radio" name="play-cat" value="leche" checked><span><img src="images/leche.png" alt=""><strong>レチェ</strong><span class="cat-details" role="list"><span role="listitem">移動スピード：標準（1倍）</span><span role="listitem"><span class="effect-icon" role="img" aria-label="鰹節">🐟</span>：7秒間スピード2倍</span><span role="listitem"><img class="effect-icon" src="images/riku.png" alt="">リクに触れると1秒間スピード3倍</span><span role="listitem"><img class="effect-icon" src="images/momo.png" alt="">モモに触れると3秒間ポイント2倍</span></span></span></label>
-        <label class="cat-option"><input type="radio" name="play-cat" value="latte"><span><img src="images/latte.png" alt=""><strong>ラテ</strong><span class="cat-details" role="list"><span role="listitem">移動スピード：レチェの1.2倍</span><span role="listitem"><span class="effect-icon" role="img" aria-label="苺">🍓</span>：5秒間スピード2.5倍</span><span role="listitem"><img class="effect-icon" src="images/riku.png" alt="">リクに触れると0.5秒間動けない</span><span role="listitem"><img class="effect-icon" src="images/momo.png" alt="">モモに触れると3秒間、通常ネズミの得点が3倍、苺の効果はスピード5倍</span></span></span></label>
+        <label class="cat-option"><input type="radio" name="play-cat" value="leche" checked><span><img src="images/leche.png" alt=""><strong>レチェ</strong><span class="cat-details" role="list"><span role="listitem">移動スピード：標準（1倍）</span><span role="listitem"><span class="effect-icon" role="img" aria-label="鰹節">🐟</span>：7秒間スピード2倍</span><span role="listitem"><img class="effect-icon" src="images/riku.png" alt="">リクに触れると3P減点、モモの効果消失</span><span role="listitem"><img class="effect-icon" src="images/momo.png" alt="">モモに触れると3秒間ポイント2倍</span></span></span></label>
+        <label class="cat-option"><input type="radio" name="play-cat" value="latte"><span><img src="images/latte.png" alt=""><strong>ラテ</strong><span class="cat-details" role="list"><span role="listitem">移動スピード：レチェの1.2倍</span><span role="listitem"><span class="effect-icon" role="img" aria-label="苺">🍓</span>：5秒間スピード2.5倍</span><span role="listitem"><img class="effect-icon" src="images/riku.png" alt="">リクに触れると1P減点＋1秒間動けない、モモの効果消失</span><span role="listitem"><img class="effect-icon" src="images/momo.png" alt="">モモに触れると3秒間、通常ネズミの得点が3倍、苺の効果はスピード5倍</span></span></span></label>
       </div>
     </fieldset>
 
@@ -53,7 +53,6 @@
 
         <div id="game-over" class="overlay" hidden>
           <div class="result-card">
-            <div class="result-emoji" aria-hidden="true"><img id="result-cat" class="result-cat" src="images/leche.png" alt="">✨</div>
             <h2>おつかれさま！</h2>
             <p>スコアは <strong id="final-score">0</strong> Pだよ！</p>
             <p id="result-save-message" class="save-message" aria-live="polite"></p>
@@ -104,7 +103,7 @@
   <div id="rotate-guide" class="rotate-guide" role="status" hidden>
     <span aria-hidden="true">↻</span>
     <strong>スマホを横にしてね</strong>
-    <p>横にするとゲームが始まるよ。<br>プレイ中に縦にしたときは一時停止します。</p>
+    <p>ログインもゲームも、横向きで使ってね。<br>プレイ中に縦にしたときは一時停止します。</p>
   </div>
 </body>
 </html>

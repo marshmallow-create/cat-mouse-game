@@ -25,10 +25,10 @@ function game(catType = "leche", scale = 1) {
     cat: { x: 300, y: 250 }, touch: { pointerId: null }, keys: new Set(["d"]),
     directionHeld() { return false; },
     mice: Array.from({ length: 10 }, () => ({ element: element(), x: 850, y: 450, dx: 0, dy: 0 })),
-    strawberries: [], spawnedStrawberryCount: 6, boostUntil: 0, rikuBoostUntil: 0, stunUntil: 0,
+    strawberries: [], spawnedStrawberryCount: 6, boostUntil: 0, stunUntil: 0,
     parents: [], extraGameSeconds: 0, riku: null, momo: null, momoPointsUntil: 0, momoStrawberryUntil: 0, startTime: 0, previousTime: 0, lastDirectionTime: 30000,
     playing: true, countingDown: false, orientationPausedAt: null, score: 0,
-    currentUser: null, finalScoreElement: element(), resultCatElement: element(),
+    currentUser: null, finalScoreElement: element(),
     gameOverElement: element(), restartButton: { focus() {} },
     updateAccountControls() {}, clearMovement() {},
     countdownScreenElement: element()
@@ -79,68 +79,84 @@ test("Riku appears once with 20 seconds remaining, changes direction and stays i
   assert.equal(riku.dy, -1);
 });
 
-test("Leche gets exactly one second of triple speed, without extending contact or shortening item boosts", () => {
-  for (const scale of [1, 0.6]) {
-    const context = game("leche", scale);
-    vm.runInContext("updateRiku(10000, 0)", context);
-    Object.assign(context.riku, { x: 300, y: 250, dx: 0, dy: 0 });
-    frame(context, 15020);
-    assert.equal(context.rikuBoostUntil, 16020);
-    assert.ok(Math.abs(context.cat.x - (300 + 270 * scale * 3 * 0.02)) < 1e-10);
-    assert.match(context.boostStatusElement.textContent, /リク： スピード3倍！ あと1秒/);
-    assert.equal(context.catElement.classList.contains("boosted"), true);
-    context.cat.x = 300;
-    frame(context, 16020);
-    assert.equal(context.rikuBoostUntil, 16020);
-    assert.ok(Math.abs(context.cat.x - (300 + 270 * scale * 0.02)) < 1e-10);
-    assert.equal(context.catElement.classList.contains("boosted"), false);
-    context.boostUntil = 22000;
-    context.riku.x = 700;
-    vm.runInContext("updateRiku(16030, 0)", context);
-    context.riku.x = context.cat.x;
-    const beforeContact = context.cat.x;
-    frame(context, 16040);
-    assert.equal(context.rikuBoostUntil, 17040);
-    assert.equal(context.boostUntil, 22000);
-    assert.ok(Math.abs(context.cat.x - (beforeContact + 270 * scale * 3 * 0.02)) < 1e-10);
-    assert.match(context.boostStatusElement.textContent, /リク： スピード3倍！ あと1秒/);
-    const beforeExpiry = context.cat.x;
-    frame(context, 17040);
-    assert.ok(Math.abs(context.cat.x - (beforeExpiry + 270 * scale * 2 * 0.02)) < 1e-10);
-    assert.match(context.boostStatusElement.textContent, /🐟 スピード2倍！ あと5秒/);
+test("Riku deducts cat-specific points once per contact and cancels simultaneous Momo effects", () => {
+  for (const [type, penalty] of [['leche', 3], ['latte', 1]]) {
+    for (const scale of [1, 0.6]) {
+      const context = game(type, scale);
+      vm.runInContext('updateRiku(10000, 0); updateMomo(10000, 0)', context);
+      Object.assign(context.riku, {x:300,y:250,dx:0,dy:0,lastDirectionTime:15020});
+      Object.assign(context.momo, {x:300,y:250,dx:0,dy:0,lastDirectionTime:15020});
+      context.score = 10;
+      context.boostUntil = 22000;
+      context.momoPointsUntil = context.momoStrawberryUntil = 18020;
+      context.previousTime = 15000;
+      vm.runInContext('update(15020)', context);
+      assert.equal(context.score, 10 - penalty);
+      assert.equal(context.scoreElement.textContent, String(10 - penalty));
+      assert.equal(context.momoPointsUntil, 0);
+      assert.equal(context.momoStrawberryUntil, 0);
+      assert.equal(context.boostUntil, 22000);
+      if (type === 'leche') {
+        assert.equal(context.stunUntil, 0);
+        assert.ok(Math.abs(context.cat.x - (300 + 270 * scale * 2 * 0.02)) < 1e-10);
+      } else {
+        assert.equal(context.stunUntil, 16020);
+        assert.equal(context.cat.x, 300);
+      }
+      context.previousTime = 15020;
+      vm.runInContext('update(15040)', context);
+      assert.equal(context.score, 10 - penalty);
+      context.riku.x = 800;
+      vm.runInContext('updateRiku(15050, 0)', context);
+      context.riku.x = context.cat.x;
+      vm.runInContext('updateRiku(15060, 0)', context);
+      assert.equal(context.score, 10 - penalty * 2);
+    }
   }
 });
 
-test("Latte stops for half a second and resumes held input; Riku moves during the stun", () => {
-  const context = game("latte");
-  vm.runInContext("updateRiku(10000, 0)", context);
+test("Riku penalties keep scores nonnegative", () => {
+  for (const type of ['leche', 'latte']) {
+    for (const initial of [0, 1, 2]) {
+      const context = game(type);
+      vm.runInContext('updateRiku(10000, 0)', context);
+      Object.assign(context.riku, {x:300,y:250,dx:0,dy:0});
+      context.score = initial;
+      vm.runInContext('updateRiku(10001, 0)', context);
+      assert.equal(context.score, Math.max(0, initial - (type === 'leche' ? 3 : 1)));
+    }
+  }
+});
+
+test("Latte stops for one second and resumes normal strawberry speed after Momo is cancelled", () => {
+  const context = game('latte');
+  vm.runInContext('updateRiku(10000, 0)', context);
   Object.assign(context.riku, { x: 300, y: 250, dx: 1, dy: 0 });
+  context.score = 10;
   context.boostUntil = 20000;
+  context.momoStrawberryUntil = 18000;
   frame(context, 15020);
-  assert.equal(context.stunUntil, 15520);
+  assert.equal(context.stunUntil, 16020);
   assert.equal(context.cat.x, 300);
   assert.equal(context.riku.x, 303);
-  assert.equal(context.catElement.classList.contains("stunned"), true);
-  frame(context, 15519);
+  assert.equal(context.catElement.classList.contains('stunned'), true);
+  frame(context, 16019);
   assert.equal(context.cat.x, 300);
-  assert.equal(context.stunUntil, 15520);
-  frame(context, 15520);
+  assert.equal(context.stunUntil, 16020);
+  frame(context, 16020);
   assert.ok(Math.abs(context.cat.x - (300 + 270 * 1.2 * 2.5 * 0.02)) < 1e-10);
-  assert.match(context.boostStatusElement.textContent, /🍓 スピード2\.5倍！/);
-  assert.equal(context.catElement.classList.contains("stunned"), false);
-  assert.equal(context.rikuBoostUntil, 0);
+  assert.equal(context.catElement.classList.contains('stunned'), false);
+  assert.equal(context.score, 9);
 });
 
 test("Riku and contact effects reset for the next game", () => {
   const context = game();
   vm.runInContext("updateRiku(10000, 0)", context);
   const image = context.riku.element;
-  context.rikuBoostUntil = 16000;
   context.stunUntil = 16000;
   vm.runInContext("resetRiku()", context);
   assert.equal(image.removed, true);
   assert.equal(context.riku, null);
-  assert.equal(context.rikuBoostUntil, 0);
   assert.equal(context.stunUntil, 0);
   assert.equal(context.catElement.classList.contains("stunned"), false);
   vm.runInContext("updateRiku(9999, 0)", context);
@@ -191,6 +207,19 @@ test("a delayed frame adds both special mice without duplicates", () => {
   vm.runInContext('update(26000); update(26000)', context);
   assert.equal(context.mice.filter(mouse => !mouse.special).length, 14);
   assert.equal(context.mice.filter(mouse => mouse.special).length, 2);
+});
+
+test("extended games cap normal mice at twenty while keeping special mice separate", () => {
+  const context = mouseGame();
+  context.extraGameSeconds = 100;
+  for (const [elapsed, expected] of [[37999, 19], [38000, 20], [40000, 20], [125001, 20]]) {
+    context.previousTime = elapsed;
+    vm.runInContext(`update(${elapsed})`, context);
+    assert.equal(context.mice.filter(mouse => !mouse.special).length, expected);
+  }
+  assert.equal(context.mice.filter(mouse => mouse.special).length, 2);
+  vm.runInContext('resetMice()', context);
+  assert.equal(context.mice.length, 1);
 });
 
 test("Momo appears once with 20 seconds left, changes direction and bounces at scaled bounds", () => {
@@ -395,28 +424,28 @@ test("Mama extends time and gives exactly three cat-specific items per new conta
     const mama = context.parents[0];
     Object.assign(mama, {x:300,y:250});
     vm.runInContext('updateParents(20001, 0, 9.999)', context);
-    assert.equal(context.extraGameSeconds, 5);
+    assert.equal(context.extraGameSeconds, 3);
     assert.equal(context.strawberries.length, 3);
     assert.ok(context.strawberries.every(item => item.element.textContent === (type === 'leche' ? '🐟' : '🍓')));
     assert.equal(context.spawnedStrawberryCount, 6);
-    vm.runInContext('updateParents(20002, 0, 14.998)', context);
-    assert.equal(context.extraGameSeconds, 5);
+    vm.runInContext('updateParents(20002, 0, 12.998)', context);
+    assert.equal(context.extraGameSeconds, 3);
     assert.equal(context.strawberries.length, 3);
     mama.x = 850;
-    vm.runInContext('updateParents(20003, 0, 14.997)', context);
+    vm.runInContext('updateParents(20003, 0, 12.997)', context);
     mama.x = 300;
-    vm.runInContext('updateParents(20004, 0, 14.996)', context);
-    assert.equal(context.extraGameSeconds, 10);
+    vm.runInContext('updateParents(20004, 0, 12.996)', context);
+    assert.equal(context.extraGameSeconds, 6);
     assert.equal(context.strawberries.length, 6);
     assert.equal(context.parents.length, 2);
     mama.x = 850;
     context.previousTime = 30001;
     vm.runInContext('update(30001)', context);
     assert.equal(context.playing, true);
-    assert.equal(context.timeElement.textContent, '10');
+    assert.equal(context.timeElement.textContent, '6');
     const images = context.parents.map(parent => parent.element);
-    context.previousTime = 40000;
-    vm.runInContext('update(40000)', context);
+    context.previousTime = 36000;
+    vm.runInContext('update(36000)', context);
     assert.equal(context.playing, false);
     assert.equal(context.parents.length, 0);
     assert.equal(context.extraGameSeconds, 0);

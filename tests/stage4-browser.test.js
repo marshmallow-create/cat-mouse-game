@@ -133,10 +133,8 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("timeElement.textContent"), "0");
     assert.equal(await evaluate("mice.filter(mouse => !mouse.special).length"), 15);
     assert.equal(await evaluate("mice.filter(mouse => mouse.special).length"), 2);
-    assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/leche.png");
     assert.equal(await evaluate("catSelectionElement.disabled"), false);
     await evaluate("document.querySelector('input[value=latte]').click()");
-    assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/leche.png");
     const aliceScore = await evaluate("Number(finalScoreElement.textContent)");
     await cdp("Page.reload");
     await poll(() => evaluate("typeof currentUser !== 'undefined' && currentUser !== null && !authBusy && !savingResults"));
@@ -203,7 +201,6 @@ test("stage 4 browser: accounts, real game, pending queue separation and retry",
     assert.equal(await evaluate("personalBestElement.querySelector('img').alt"), "ラテ");
     assert.ok(await evaluate("[...rankingBodyElement.rows].some(row => row.cells[3].textContent === 'ラテ')"));
     assert.ok(await evaluate(`rankingBodyElement.textContent.includes(${JSON.stringify(usernames[1])})`));
-    assert.equal(await evaluate("resultCatElement.getAttribute('src')"), "images/latte.png");
     assert.equal((await admin.query("SELECT score FROM game_results WHERE user_id = $1", [bobId])).rows[0].score, 7);
     assert.equal((await admin.query("SELECT count(*) FROM game_results WHERE user_id = $1", [aliceId])).rows[0].count, "0");
     await evaluate("logoutButton.click()");
